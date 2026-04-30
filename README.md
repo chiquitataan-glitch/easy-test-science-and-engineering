@@ -13,16 +13,27 @@
 - Docker
 - Docker Compose
 
-### 启动项目
+### Docker Compose 启动（推荐）
 
 ```bash
 docker compose up --build
 ```
 
+### 后端独立启动
+
+```bash
+cd backend
+npm install
+npm start
+```
+
+访问健康检查接口：http://localhost:3000/health
+
 ### 访问地址
 
 - 前端：http://localhost:5173
 - 后端：http://localhost:3000
+- 健康检查：http://localhost:3000/health
 
 ### 常用Docker命令
 
