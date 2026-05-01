@@ -71,6 +71,28 @@ async function register(email, password, displayName) {
   return data.data
 }
 
+async function refreshUser() {
+  const res = await fetch('/api/auth/me', {
+    headers: { 'Authorization': `Bearer ${state.token}` }
+  })
+  const userData = await res.json()
+
+  if (!userData.success) {
+    clearAuth()
+    throw new Error(userData.message || '获取用户信息失败')
+  }
+
+  const quotaRes = await fetch('/api/quota/me', {
+    headers: { 'Authorization': `Bearer ${state.token}` }
+  })
+  const quotaData = await quotaRes.json()
+
+  state.user = {
+    ...userData.data,
+    quota: quotaData.success ? quotaData.data : { remaining: null }
+  }
+}
+
 function clearAuth() {
   state.user = null
   state.token = null
@@ -89,4 +111,4 @@ const isLoggedIn = computed(() => !!state.token && !!state.user)
 const userDisplayName = computed(() => state.user?.displayName || state.user?.email || '')
 const quotaRemaining = computed(() => state.user?.quota?.remaining ?? null)
 
-export { state, initAuth, login, register, logout, clearAuth, isLoggedIn, userDisplayName, quotaRemaining }
+export { state, initAuth, login, register, logout, clearAuth, refreshUser, isLoggedIn, userDisplayName, quotaRemaining }
