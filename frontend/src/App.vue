@@ -157,6 +157,30 @@
         📝 暂未生成题目，请调整配置后重试
       </div>
 
+      <div v-if="knowledgeCoverage" class="knowledge-coverage-box">
+        <div class="kc-title">📚 知识点覆盖</div>
+        <div class="kc-summary">{{ knowledgeCoverage.description }}</div>
+        <div class="kc-stats">
+          <span>{{ knowledgeCoverage.total_points }} 个知识点</span>
+          <span>·</span>
+          <span>{{ knowledgeCoverage.questions_with_knowledge }}/{{ safeQuestions.length }} 题已标注</span>
+        </div>
+        <div v-if="knowledgeCoverage.top_points?.length" class="kc-top-list">
+          <span v-for="kp in knowledgeCoverage.top_points" :key="kp.name" class="kc-top-tag">
+            {{ kp.name }}（{{ kp.count }}题）
+          </span>
+        </div>
+        <div v-if="knowledgeCoverage.gaps?.length" class="kc-gaps">
+          <div v-for="(g, i) in knowledgeCoverage.gaps" :key="'kg'+i" class="kc-gap-item">⚠ {{ g }}</div>
+        </div>
+      </div>
+
+      <div v-if="paperData.knowledge_summary" class="ks-box">
+        <div class="ks-title">📖 AI 知识点汇总</div>
+        <div class="ks-desc">{{ paperData.knowledge_summary.description }}</div>
+        <div class="ks-stats">共 {{ paperData.knowledge_summary.total }} 个知识点</div>
+      </div>
+
       <div v-for="group in questionGroups" :key="group.type" class="type-section">
         <h3 class="type-title">{{ group.label }}（{{ group.questions.length }}题，共{{ group.totalScore }}分）</h3>
 
@@ -289,6 +313,10 @@ const summaryLevel = computed(() => {
 
 const selfCheck = computed(() => {
   return paperData.value?.quality_report?.self_check || null
+})
+
+const knowledgeCoverage = computed(() => {
+  return paperData.value?.quality_report?.knowledge_coverage || null
 })
 
 const safeQuestions = computed(() => {

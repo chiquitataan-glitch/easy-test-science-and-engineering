@@ -5,15 +5,6 @@ const REQUIRED_QUESTION_FIELDS = [
   'answer', 'analysis', 'knowledge_points', 'difficulty', 'score'
 ];
 
-const TYPE_OPTION_COUNT = {
-  single_choice: 4,
-  multi_choice: 4,
-  fill_blank: 0,
-  true_false: 0,
-  calculation: 0,
-  short_answer: 0
-};
-
 function validatePaper(paper, expectedConfig) {
   const warnings = [];
   let fatal = null;
@@ -36,6 +27,10 @@ function validatePaper(paper, expectedConfig) {
 
   if (!paper.course_name) {
     warnings.push('试卷缺少 course_name');
+  }
+
+  if (!paper.knowledge_summary) {
+    warnings.push('试卷缺少 knowledge_summary');
   }
 
   const seenContents = new Set();
@@ -184,6 +179,9 @@ function buildQualityReport(validationResult) {
   }
   if (validationResult.warnings.some(w => w.includes('期望'))) {
     report.suggestions.push('题型数量与配置不一致，建议重新生成');
+  }
+  if (validationResult.warnings.some(w => w.includes('知识点'))) {
+    report.suggestions.push('部分题目缺少知识点，影响覆盖统计');
   }
 
   return report;

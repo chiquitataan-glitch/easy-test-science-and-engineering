@@ -23,6 +23,17 @@
       "score": 5
     }
   ],
+  "knowledge_summary": {
+    "points": [
+      {
+        "name": "雷诺数判断流型",
+        "question_nos": [1, 3],
+        "difficulty_distribution": { "easy": 1, "medium": 1, "hard": 0 }
+      }
+    ],
+    "total": 8,
+    "description": "试卷知识点覆盖了课程标准的主要模块"
+  },
   "quality_report": {
     "summary": "试卷质量简述",
     "warnings": []
@@ -41,12 +52,14 @@ question_type 仅限以下6种：
 
 要求：
 1. 严格按照配置中指定的各题型数量和分值生成题目
-2. 知识点必须来自课程资料
-3. difficulty 值：easy / medium / hard，严格按照配置的比例分配
-4. 答案必须准确
-5. analysis 写解析
-6. quality_report.summary 写 30 字内总结
-7. 只返回纯 JSON，不要有任何额外内容
+2. 每道题必须有 knowledge_points 字段，至少包含 1 个具体知识点，知识点必须来自课程资料
+3. 必须在根级别输出 knowledge_summary，汇总所有知识点，列出每道题覆盖的知识点
+4. 知识点命名要具体明确，不要过于笼统（如"流体力学"比"物理"好）
+5. difficulty 值：easy / medium / hard，严格按照配置的比例分配
+6. 答案必须准确
+7. analysis 写解析
+8. quality_report.summary 写 30 字内总结
+9. 只返回纯 JSON，不要有任何额外内容
 
 【课程资料】
 {{source_text}}

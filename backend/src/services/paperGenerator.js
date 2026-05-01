@@ -2,6 +2,7 @@ const { chat } = require('./deepseekClient');
 const { renderPrompt } = require('./promptManager');
 const { normalizePaperConfig, buildQuestionConfigText } = require('../config/paperConfig');
 const { validatePaper, buildQualityReport } = require('./paperValidator');
+const { enrichQualityReport } = require('./knowledgeExtractor');
 
 const MAX_TEXT_LENGTH = 6000;
 const MIN_TEXT_LENGTH = 50;
@@ -96,9 +97,17 @@ async function generatePaper(textContent, courseName, configInput) {
       throw new Error('试卷格式不正确，缺少题目数据');
     }
 
+    if (!paper.knowledge_summary) {
+      paper.knowledge_summary = null;
+    }
+
     const selfCheck = await selfCheckPaper(paper);
 
     const finalPaper = selfCheck.fixed_paper;
+    if (!finalPaper.knowledge_summary) {
+      finalPaper.knowledge_summary = paper.knowledge_summary;
+    }
+
     finalPaper.quality_report = finalPaper.quality_report || {};
     finalPaper.quality_report.self_check = {
       passed: selfCheck.passed,
@@ -107,17 +116,20 @@ async function generatePaper(textContent, courseName, configInput) {
     };
 
     const validation = validatePaper(finalPaper, config);
-    const qualityReport = buildQualityReport(validation);
+    let qualityReport = buildQualityReport(validation);
+
+    qualityReport = enrichQualityReport(finalPaper, qualityReport);
 
     finalPaper.quality_report = {
       ...finalPaper.quality_report,
       score: qualityReport.score,
       warnings: [
         ...(finalPaper.quality_report.warnings || []),
-        ...qualityReport.warnings
+        ...qualityReport.warnings.filter(w => !(finalPaper.quality_report.warnings || []).includes(w))
       ],
       suggestions: qualityReport.suggestions || [],
-      summary: qualityReport.summary
+      summary: qualityReport.summary,
+      knowledge_coverage: qualityReport.knowledge_coverage
     };
 
     finalPaper.quality_report.prompt_version = GENERATE_PROMPT;
