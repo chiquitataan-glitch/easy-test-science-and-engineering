@@ -2,27 +2,32 @@
 
 基于 DeepSeek AI 的智能试卷生成 Web 应用。上传课件资料（PDF/DOCX/PPT/PPTX），自动提取文本内容，调用 DeepSeek 大语言模型生成结构化复习试卷。
 
-**v0.2.0** — 生成质量优化版
+**v0.5.0** — MVP 可用版
 
 ## 技术栈
 
 | 层 | 技术 |
 |------|------|
-| 前端 | Vue 3 (Composition API) + Vite 5 |
+| 前端 | Vue 3 (Composition API) + Vite 5 + vue-router 4 |
 | 后端 | Node.js + Express |
+| 数据库 | PostgreSQL 16 + Prisma ORM |
+| 鉴权 | JWT + bcrypt |
 | AI | DeepSeek API (`deepseek-chat`) |
 | 文件解析 | pdf-parse, mammoth, officeparser, JSZip |
 | PPT 转换 | LibreOffice Impress (headless) |
 | 容器化 | Docker + Docker Compose |
 
-## 支持文件格式
+## V0.5 功能
 
-| 格式 | 文本解析 | 图片 OCR | 依赖 |
-|------|:---:|:---:|------|
-| PDF | ✅ | - | pdf-parse（纯 JS） |
-| DOCX | ✅ | - | mammoth（纯 JS） |
-| PPTX | ✅ | ⚠️ 需 Vision API | officeparser + JSZip |
-| PPT | ✅（转为 PPTX） | ⚠️ 需 Vision API | LibreOffice |
+- **用户系统**：邮箱注册/登录，JWT 鉴权，token 自动恢复
+- **数据持久化**：PostgreSQL + Prisma，10 张业务表
+- **文件管理**：上传 PDF/DOCX/PPT/PPTX 自动入库，用户资源隔离
+- **试卷历史**：生成记录永久保存，支持列表/详情/重新生成
+- **题目拆分**：每道题独立存储，支持按题查询
+- **额度控制**：默认 10 次生成额度，Prisma 事务防并发超扣
+- **质量报告**：评分（0-100）、校验警告、知识点覆盖统计
+- **前端路由**：6 个页面（首页/历史/详情/个人中心/登录/注册）
+- **V1.0 预留**：微信登录/小程序/支付/对象存储字段已就绪
 
 ## 快速开始
 
@@ -35,7 +40,10 @@
 
 ```bash
 cp backend/.env.example backend/.env
-# 编辑 backend/.env，填入你的 DEEPSEEK_API_KEY
+# 编辑 backend/.env，至少填入以下 3 项：
+#   DEEPSEEK_API_KEY=sk-xxx
+#   POSTGRES_PASSWORD=your_password
+#   JWT_SECRET=随机生成64字符以上
 ```
 
 ### 2. Docker Compose 启动
@@ -44,9 +52,15 @@ cp backend/.env.example backend/.env
 docker compose up --build
 ```
 
-构建过程约 5-8 分钟（首次需下载 LibreOffice）。
+启动顺序：postgres → backend（自动 migrate + 启动）→ frontend。首次构建约 5-8 分钟。
 
-### 3. 访问
+### 3. 初始化种子数据（可选）
+
+```bash
+docker compose exec backend npm run prisma:seed
+```
+
+### 4. 访问
 
 | 地址 | 说明 |
 |------|------|
@@ -56,96 +70,112 @@ docker compose up --build
 ### 本地启动（无需 Docker）
 
 ```bash
-# 终端1：后端
-cd backend && npm install && npm start
+# 1. 启动 PostgreSQL
+docker compose up -d postgres
 
-# 终端2：前端
-cd frontend && npm install && npx vite --host
+# 2. 后端
+cd backend && cp .env.example .env && npm install
+npx prisma migrate dev && npx prisma db seed
+npm run dev
+
+# 3. 前端
+cd frontend && npm install && npm run dev
 ```
 
-> 本地启动时，PPT 格式需要自行安装 LibreOffice。
+## 接口概览
+
+| 模块 | 接口数 | 说明 |
+|------|:---:|------|
+| System | 2 | 健康检查、DeepSeek 连通测试 |
+| Auth | 5 | 注册/登录/me/退出/微信占位 |
+| Files | 4 | 上传(鉴权)/列表/详情/删除 |
+| Papers | 4 | 生成(扣quota)/列表/详情/重新生成 |
+| Quota | 2 | 额度查询/使用流水 |
+
+> 详细文档见 [docs/API.md](docs/API.md)，完整 17 个接口含 curl 示例和错误码。
+
+## 支持文件格式
+
+| 格式 | 文本解析 | 图片 OCR | 依赖 |
+|------|:---:|:---:|------|
+| PDF | ✅ | - | pdf-parse（纯 JS） |
+| DOCX | ✅ | - | mammoth（纯 JS） |
+| PPTX | ✅ | ⚠️ 需 Vision API | officeparser + JSZip |
+| PPT | ✅（转为 PPTX） | ⚠️ 需 Vision API | LibreOffice |
 
 ## 环境变量
 
 | 变量 | 必填 | 默认值 | 说明 |
 |------|:---:|--------|------|
 | `DEEPSEEK_API_KEY` | ✅ | - | DeepSeek API 密钥 |
+| `POSTGRES_PASSWORD` | ✅ | - | 数据库密码 |
+| `JWT_SECRET` | ✅ | - | JWT 签名密钥（≥64字符） |
+| `NODE_ENV` | ❌ | development | 运行环境 |
 | `PORT` | ❌ | 3000 | 后端端口 |
-| `DEEPSEEK_API_URL` | ❌ | `https://api.deepseek.com/v1/chat/completions` | API 地址 |
+| `DATABASE_URL` | ❌ | postgresql://easy_test:xxx@postgres:5432/easy_test | 数据库连接 |
+| `POSTGRES_USER` | ❌ | easy_test | 数据库用户 |
+| `POSTGRES_DB` | ❌ | easy_test | 数据库名 |
+| `JWT_EXPIRES_IN` | ❌ | 24h | Token 有效期 |
+| `JWT_REFRESH_SECRET` | ❌ | - | Refresh Token 密钥（V1.0） |
+| `JWT_REFRESH_EXPIRES_IN` | ❌ | 7d | Refresh Token 有效期（V1.0） |
+| `DEEPSEEK_API_URL` | ❌ | https://api.deepseek.com/v1/chat/completions | API 地址 |
+| `UPLOAD_DIR` | ❌ | ./uploads | 上传目录 |
+| `MAX_FILE_SIZE` | ❌ | 20971520（20MB） | 文件大小限制 |
+| `DEFAULT_USER_QUOTA` | ❌ | 10 | 新用户默认额度 |
+| `CORS_ORIGIN` | ❌ | http://localhost:5173 | CORS 白名单 |
+| `WECHAT_APP_ID` | ❌ | - | 微信 AppID（V1.0） |
+| `WECHAT_APP_SECRET` | ❌ | - | 微信 AppSecret（V1.0） |
+| `STORAGE_PROVIDER` | ❌ | local | 存储后端（V1.0 可切 s3） |
+| `LOCAL_STORAGE_DIR` | ❌ | ./uploads | 本地存储目录 |
 
-## 接口概览
+## 前端页面
 
-| 方法 | 路径 | 说明 |
+| 路径 | 页面 | 说明 |
 |------|------|------|
-| GET | `/health` | 健康检查 |
-| POST | `/api/test-deepseek` | DeepSeek 连通性测试 |
-| POST | `/api/upload` | 上传课件文件 |
-| POST | `/api/parse-file` | 解析文件提取文本 |
-| POST | `/api/generate-paper` | 生成结构化试卷 |
+| `/login` | 登录 | 邮箱 + 密码 |
+| `/register` | 注册 | 昵称 + 邮箱 + 密码 |
+| `/` | 首页 | 上传文件 + 配置 + 生成试卷 |
+| `/papers` | 试卷历史 | 分页列表 |
+| `/papers/:id` | 试卷详情 | 完整试卷 + 重新生成 |
+| `/profile` | 个人中心 | 用户信息 + 额度 |
 
-详细文档见 [docs/API.md](docs/API.md)。
+## V1.0 预留
 
-## V0.2 核心功能
+详见 [docs/TASKS.md](docs/TASKS.md#v10-小程序预留说明)，关键预留点：
 
-- **多格式支持**：PDF / DOCX / PPT / PPTX 四种课件格式
-- **PPT 解析**：通过 LibreOffice headless 转换 + officeparser 提取文本
-- **图片 OCR**（可选）：PPTX 内嵌图片通过 DeepSeek Vision API 识别文字
-- **结构化试卷**：36 题标准试卷（单选/多选/填空/判断/计算/简答）
-- **题型配置**：可自定义各题型数量、分值和难度比例
-- **Prompt 版本管理**：Prompt 模板文件化，支持迭代和 A/B 测试
-- **AI 自检**：自动检查试卷结构并修复问题
-- **质量报告**：评分（0-100）、校验警告、改进建议
-- **知识点覆盖**：自动统计知识点分布和覆盖盲区
-- **前端展示**：按题型分组卡片、难度标签、答案高亮、质量评分进度条
-
-## 常见问题
-
-### Q: PPT 上传报错"未安装 LibreOffice"？
-
-本地开发需手动安装 LibreOffice：
-- Windows：从 [libreoffice.org](https://www.libreoffice.org/download/) 下载
-- macOS：`brew install --cask libreoffice`
-- Linux：`sudo apt-get install libreoffice-impress`
-
-Docker 环境已内置，无需额外配置。
-
-### Q: 生成试卷很慢？
-
-正常，DeepSeek 生成 36 道题约 1-2 分钟，自检再额外 30-90 秒。
-
-### Q: 图片 OCR 不工作？
-
-`deepseek-chat` 模型对 Vision 的支持因区域而异。不支持时会自动降级——跳过图片 OCR，不影响文本解析。
-
-### Q: 如何调整题目数量？
-
-前端页面的"出题配置"面板可自定义各题型数量和分值。不展开面板则使用默认配置。
+- `user_identities` 支持微信 openid/unionid
+- `ClientType` 枚举已含 `wechat_mini_program`
+- `POST /api/auth/wechat-mini-program-login` 占位接口
+- `storage_provider`/`storage_key` 对象存储
+- `plans` 表支付套餐
+- `usage_records.client_type` 区分端用量
 
 ## 项目结构
 
 ```
-easy-test/
+easy test/
 ├── backend/
+│   ├── prisma/
+│   │   ├── schema.prisma      # 数据模型（10 表 5 枚举）
+│   │   └── seed.js            # 种子数据
 │   ├── src/
-│   │   ├── config/fileTypes.js, paperConfig.js
-│   │   ├── prompts/generate-v1.txt, selfcheck-v1.txt
-│   │   ├── routes/deepseek.js, upload.js, parseFile.js, generatePaper.js
-│   │   └── services/ (deepseekClient, promptManager, paperGenerator,
-│   │        paperValidator, knowledgeExtractor, imageToText, parsers/)
-│   ├── uploads/ (不提交 Git)
-│   ├── .env.example
-│   └── Dockerfile
-├── frontend/src/ (App.vue, style.css)
-├── docs/ (API.md, DEV_ENV.md, TASKS.md, ROADMAP.md)
+│   │   ├── config/            # 配置（env/fileTypes/paperConfig）
+│   │   ├── middleware/        # auth + errorHandler
+│   │   ├── routes/            # auth/files/papers/quota + V0.2 兼容
+│   │   ├── services/          # 业务逻辑 + parsers + DeepSeek
+│   │   ├── utils/             # response + errors
+│   │   └── index.js           # 入口
+│   ├── Dockerfile
+│   └── .env.example
+├── frontend/
+│   └── src/
+│       ├── api/               # apiClient fetch 封装
+│       ├── components/        # NavBar + PaperContent
+│       ├── stores/            # authStore reactive
+│       ├── views/             # 6 个页面组件
+│       ├── router.js          # vue-router
+│       └── App.vue            # 布局壳
+├── docs/                      # API/ROADMAP/TASKS/DEV_ENV
 ├── docker-compose.yml
-└── README.md
+└── CHANGELOG.md
 ```
-
-## 版本路线
-
-| 版本 | 目标 |
-|------|------|
-| **v0.1.0** ✅ | 核心闭环：上传→解析→生成→展示 |
-| **v0.2.0** ✅ | 多格式支持 + 生成质量优化 |
-| v0.5.0 | 用户登录、数据库、历史记录 |
-| v1.0.0 | 完整后台、成本统计、生产部署
