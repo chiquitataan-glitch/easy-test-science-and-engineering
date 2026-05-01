@@ -43,22 +43,10 @@ async function generateAndSave(userId, fileId, courseName, configInput, clientTy
 
   const startTime = Date.now();
   let paper;
-  let status = 'completed';
-  let errorMessage = null;
 
   try {
     paper = await generatePaper(parsedText, courseName.trim(), configInput);
   } catch (err) {
-    status = 'failed';
-    errorMessage = err.message;
-    await prisma.generationLog.create({
-      data: {
-        paperId: 'failed',
-        status: 'failed',
-        errorMessage: err.message,
-        durationMs: Date.now() - startTime
-      }
-    });
     throw new GenerationFailedError(err.message || '试卷生成失败');
   }
 
@@ -78,7 +66,7 @@ async function generateAndSave(userId, fileId, courseName, configInput, clientTy
       promptVersion: paper.quality_report?.prompt_version || 'generate-v1',
       modelName: 'deepseek-chat',
       tokenUsage: paper.usage?.total_tokens || null,
-      status,
+      status: 'completed',
       clientType: clientType || 'web'
     }
   });
@@ -262,20 +250,10 @@ async function regeneratePaper(paperId, userId, configOverride) {
 
   const startTime = Date.now();
   let paper;
-  let status = 'completed';
 
   try {
     paper = await generatePaper(original.parsedTextSnapshot, original.courseName, config);
   } catch (err) {
-    status = 'failed';
-    await prisma.generationLog.create({
-      data: {
-        paperId: 'failed-regenerate',
-        status: 'failed',
-        errorMessage: err.message,
-        durationMs: Date.now() - startTime
-      }
-    });
     throw new GenerationFailedError(err.message || '试卷重新生成失败');
   }
 
@@ -297,7 +275,7 @@ async function regeneratePaper(paperId, userId, configOverride) {
       promptVersion: paper.quality_report?.prompt_version || 'generate-v1',
       modelName: 'deepseek-chat',
       tokenUsage: paper.usage?.total_tokens || null,
-      status,
+      status: 'completed',
       clientType: original.clientType,
       originalPaperId: paperId
     }
