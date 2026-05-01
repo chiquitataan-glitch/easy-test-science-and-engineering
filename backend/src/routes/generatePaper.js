@@ -1,7 +1,6 @@
 const express = require('express');
-const path = require('path');
 const fs = require('fs');
-const { getFileExtension, isAllowedExtension, LABEL } = require('../config/fileTypes');
+const { isAllowedExtension, LABEL } = require('../config/fileTypes');
 const { parseFile } = require('../services/parsers');
 const { generatePaper } = require('../services/paperGenerator');
 const { normalizePaperConfig } = require('../config/paperConfig');

@@ -97,16 +97,12 @@ async function generatePaper(textContent, courseName, configInput) {
       throw new Error('试卷格式不正确，缺少题目数据');
     }
 
-    if (!paper.knowledge_summary) {
-      paper.knowledge_summary = null;
-    }
+    const aiKnowledgeSummary = paper.knowledge_summary || null;
 
     const selfCheck = await selfCheckPaper(paper);
 
     const finalPaper = selfCheck.fixed_paper;
-    if (!finalPaper.knowledge_summary) {
-      finalPaper.knowledge_summary = paper.knowledge_summary;
-    }
+    finalPaper.knowledge_summary = finalPaper.knowledge_summary || aiKnowledgeSummary;
 
     finalPaper.quality_report = finalPaper.quality_report || {};
     finalPaper.quality_report.self_check = {

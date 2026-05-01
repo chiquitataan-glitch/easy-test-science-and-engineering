@@ -1,5 +1,4 @@
 const JSZip = require('jszip');
-const fs = require('fs');
 const path = require('path');
 
 const MAX_IMAGES = 20;
@@ -21,8 +20,7 @@ function mimeType(filename) {
   return 'application/octet-stream';
 }
 
-async function extractImages(filePath) {
-  const buffer = fs.readFileSync(filePath);
+async function extractImages(buffer) {
   const zip = await new JSZip().loadAsync(buffer);
 
   const mediaFiles = Object.keys(zip.files)

@@ -26,8 +26,11 @@ async function extractPptxText(filePath) {
     }
   }
 
-  const { images, warnings: extractWarnings } = await extractImages(filePath);
-  const imageWarnings = [...extractWarnings];
+  const { images, warnings: extractWarnings } = await extractImages(buffer);
+
+  for (const w of extractWarnings) {
+    console.warn(`[pptx] ${w}`);
+  }
 
   if (images.length > 0) {
     const ocrTexts = [];
@@ -38,7 +41,7 @@ async function extractPptxText(filePath) {
         ocrTexts.push(ocr.text);
       }
       if (ocr.warning) {
-        imageWarnings.push(`${img.name}: ${ocr.warning}`);
+        console.warn(`[pptx] ${img.name}: ${ocr.warning}`);
       }
     }
 
