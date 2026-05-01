@@ -27,7 +27,39 @@
 - 前端：宿主5173 -> 容器5173
 - 后端：宿主3000 -> 容器3000
 
-## 开发调试
+## 系统依赖说明
+
+### LibreOffice（解析 .ppt 文件）
+
+后端 Docker 镜像包含 LibreOffice Impress，用于将老格式 `.ppt` 文件转换为 `.pptx` 后再提取文本。
+
+- Docker 环境：已内置在 Dockerfile 中，`docker compose up --build` 自动安装
+- 本地环境：需要手动安装 LibreOffice
+  - Windows：从 https://www.libreoffice.org/download/ 下载安装
+  - macOS：`brew install --cask libreoffice`
+  - Linux：`sudo apt-get install libreoffice-impress`
+
+> 如果本地未安装 LibreOffice，上传 `.ppt` 文件时会返回错误提示，请使用 `.pptx` 格式代替。
+
+## 文件上传说明
+
+- `pdf`：纯 JS 解析，无需系统依赖
+- `docx`：纯 JS 解析，无需系统依赖
+- `pptx`：纯 JS 解析，支持图片 OCR（需 Vision API）
+- `ppt`：依赖 LibreOffice 转换为 `.pptx` 后解析
+
+### 图片 OCR 说明（Vision API）
+
+PPTX 解析器会尝试提取幻灯片中的内嵌图片并调用 DeepSeek 多模态 API 进行文字识别。
+
+- **API**：`POST /v1/chat/completions`，使用 `image_url` 消息格式
+- **限制**：每文件最多处理 20 张图片，单张 ≤ 5MB
+- **降级**：如果 DeepSeek 当前模型不支持 Vision（返回 `unknown variant image_url`），图片 OCR 会优雅跳过，不影响纯文本解析
+- **公式**：图片中的公式会被识别并转为 LaTeX 格式（当 Vision 可用时）
+
+> 需要 DeepSeek 多模态支持才能使用图片 OCR 功能。当前 `deepseek-chat` 模型可能暂不支持，会根据 API 返回自动降级。
+
+## 调试技巧
 
 ### 进入后端容器
 ```bash

@@ -1,0 +1,65 @@
+你是一个专业的出题教师。请根据以下【课程资料】为《{{course_name}}》生成一份复习试卷。
+
+必须严格输出如下 JSON 格式，不要包含任何额外文字或 markdown 标记：
+
+{
+  "paper_title": "《{{course_name}}》复习试卷",
+  "course_name": "{{course_name}}",
+  "questions": [
+    {
+      "question_type": "single_choice",
+      "question_no": 1,
+      "content": "题目内容",
+      "options": [
+        {"key": "A", "value": "选项内容"},
+        {"key": "B", "value": "选项内容"},
+        {"key": "C", "value": "选项内容"},
+        {"key": "D", "value": "选项内容"}
+      ],
+      "answer": "A",
+      "analysis": "解析说明",
+      "knowledge_points": ["知识点1"],
+      "difficulty": "easy",
+      "score": 5
+    }
+  ],
+  "knowledge_summary": {
+    "points": [
+      {
+        "name": "雷诺数判断流型",
+        "question_nos": [1, 3],
+        "difficulty_distribution": { "easy": 1, "medium": 1, "hard": 0 }
+      }
+    ],
+    "total": 8,
+    "description": "试卷知识点覆盖了课程标准的主要模块"
+  },
+  "quality_report": {
+    "summary": "试卷质量简述",
+    "warnings": []
+  }
+}
+
+{{question_config}}
+
+question_type 仅限以下6种：
+- single_choice：单选题，每题4个选项
+- multi_choice：多选题，每题4个选项，answer 至少两个字母用逗号分隔如"A,C"
+- fill_blank：填空题
+- true_false：判断题，答案填"√"或"×"
+- calculation：计算题，answer字段写计算步骤
+- short_answer：简答题，answer字段写评分要点
+
+要求：
+1. 严格按照配置中指定的各题型数量和分值生成题目
+2. 每道题必须有 knowledge_points 字段，至少包含 1 个具体知识点，知识点必须来自课程资料
+3. 必须在根级别输出 knowledge_summary，汇总所有知识点，列出每道题覆盖的知识点
+4. 知识点命名要具体明确，不要过于笼统（如"流体力学"比"物理"好）
+5. difficulty 值：easy / medium / hard，严格按照配置的比例分配
+6. 答案必须准确
+7. analysis 写解析
+8. quality_report.summary 写 30 字内总结
+9. 只返回纯 JSON，不要有任何额外内容
+
+【课程资料】
+{{source_text}}

@@ -1,12 +1,11 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { extractPdfText } = require('../services/pdfExtractor');
-const { extractDocxText } = require('../services/docxExtractor');
+const { getFileExtension, isAllowedExtension, LABEL } = require('../config/fileTypes');
+const { parseFile } = require('../services/parsers');
 
 const router = express.Router();
 
-const SUPPORTED_TYPES = ['.pdf', '.docx'];
 const PREVIEW_LENGTH = 1000;
 
 router.post('/parse-file', async (req, res) => {
@@ -20,12 +19,10 @@ router.post('/parse-file', async (req, res) => {
   }
 
   try {
-    const ext = path.extname(filePath).toLowerCase();
-
-    if (!SUPPORTED_TYPES.includes(ext)) {
+    if (!isAllowedExtension(filePath)) {
       return res.status(400).json({
         success: false,
-        message: '不支持的文件类型，仅支持 PDF 和 DOCX'
+        message: `不支持的文件类型，仅支持 ${LABEL}`
       });
     }
 
@@ -36,13 +33,8 @@ router.post('/parse-file', async (req, res) => {
       });
     }
 
-    let text = '';
-
-    if (ext === '.pdf') {
-      text = await extractPdfText(filePath);
-    } else if (ext === '.docx') {
-      text = await extractDocxText(filePath);
-    }
+    const text = await parseFile(filePath);
+    const ext = getFileExtension(filePath);
 
     res.json({
       success: true,

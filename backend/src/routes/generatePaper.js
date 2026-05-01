@@ -1,16 +1,15 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { extractPdfText } = require('../services/pdfExtractor');
-const { extractDocxText } = require('../services/docxExtractor');
+const { getFileExtension, isAllowedExtension, LABEL } = require('../config/fileTypes');
+const { parseFile } = require('../services/parsers');
 const { generatePaper } = require('../services/paperGenerator');
+const { normalizePaperConfig } = require('../config/paperConfig');
 
 const router = express.Router();
 
-const SUPPORTED_TYPES = ['.pdf', '.docx'];
-
 router.post('/generate-paper', async (req, res) => {
-  const { filePath, courseName } = req.body;
+  const { filePath, courseName, config } = req.body;
 
   if (!filePath) {
     return res.status(400).json({
@@ -27,29 +26,30 @@ router.post('/generate-paper', async (req, res) => {
   }
 
   try {
-    const ext = path.extname(filePath).toLowerCase();
+    normalizePaperConfig(config);
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
 
-    if (!SUPPORTED_TYPES.includes(ext)) {
-      return res.status(400).json({
-        success: false,
-        message: '不支持的文件类型，仅支持 PDF 和 DOCX'
-      });
-    }
+  if (!isAllowedExtension(filePath)) {
+    return res.status(400).json({
+      success: false,
+      message: `不支持的文件类型，仅支持 ${LABEL}`
+    });
+  }
 
-    if (!fs.existsSync(filePath)) {
-      return res.status(400).json({
-        success: false,
-        message: '文件不存在'
-      });
-    }
+  if (!fs.existsSync(filePath)) {
+    return res.status(400).json({
+      success: false,
+      message: '文件不存在'
+    });
+  }
 
-    let text = '';
-
-    if (ext === '.pdf') {
-      text = await extractPdfText(filePath);
-    } else if (ext === '.docx') {
-      text = await extractDocxText(filePath);
-    }
+  try {
+    const text = await parseFile(filePath);
 
     if (!text || text.trim().length === 0) {
       return res.status(400).json({
@@ -58,7 +58,7 @@ router.post('/generate-paper', async (req, res) => {
       });
     }
 
-    const paper = await generatePaper(text, courseName.trim());
+    const paper = await generatePaper(text, courseName.trim(), config);
 
     res.json({
       success: true,
