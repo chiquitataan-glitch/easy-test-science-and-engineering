@@ -45,8 +45,19 @@
 
 - `pdf`：纯 JS 解析，无需系统依赖
 - `docx`：纯 JS 解析，无需系统依赖
-- `pptx`：纯 JS 解析，无需系统依赖
+- `pptx`：纯 JS 解析，支持图片 OCR（需 Vision API）
 - `ppt`：依赖 LibreOffice 转换为 `.pptx` 后解析
+
+### 图片 OCR 说明（Vision API）
+
+PPTX 解析器会尝试提取幻灯片中的内嵌图片并调用 DeepSeek 多模态 API 进行文字识别。
+
+- **API**：`POST /v1/chat/completions`，使用 `image_url` 消息格式
+- **限制**：每文件最多处理 20 张图片，单张 ≤ 5MB
+- **降级**：如果 DeepSeek 当前模型不支持 Vision（返回 `unknown variant image_url`），图片 OCR 会优雅跳过，不影响纯文本解析
+- **公式**：图片中的公式会被识别并转为 LaTeX 格式（当 Vision 可用时）
+
+> 需要 DeepSeek 多模态支持才能使用图片 OCR 功能。当前 `deepseek-chat` 模型可能暂不支持，会根据 API 返回自动降级。
 
 ## 调试技巧
 
