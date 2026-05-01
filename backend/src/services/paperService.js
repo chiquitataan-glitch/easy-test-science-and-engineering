@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const { generatePaper } = require('./paperGenerator');
 const { parseFile } = require('./parsers');
 const { FileNotFoundError, PermissionDeniedError, PaperNotFoundError, GenerationFailedError } = require('../utils/errors');
+const { checkQuota, deductQuota } = require('./quotaService');
 
 const prisma = new PrismaClient();
 
@@ -37,6 +38,8 @@ async function generateAndSave(userId, fileId, courseName, configInput, clientTy
   if (!courseName || courseName.trim().length === 0) {
     throw new GenerationFailedError('请提供课程名称');
   }
+
+  await checkQuota(userId);
 
   const startTime = Date.now();
   let paper;
@@ -108,6 +111,8 @@ async function generateAndSave(userId, fileId, courseName, configInput, clientTy
 
   const questionCount = paper.questions ? paper.questions.length : 0;
   const qualityScore = paper.quality_report?.score ?? null;
+
+  await deductQuota(userId, 'generate', 'paper', paperRecord.id, clientType || 'web');
 
   return {
     paperId: paperRecord.id,
@@ -251,6 +256,8 @@ async function regeneratePaper(paperId, userId, configOverride) {
     throw new GenerationFailedError('原试卷缺少文本快照，无法重新生成');
   }
 
+  await checkQuota(userId);
+
   const config = configOverride || original.config;
 
   const startTime = Date.now();
@@ -324,6 +331,8 @@ async function regeneratePaper(paperId, userId, configOverride) {
 
   const questionCount = paper.questions ? paper.questions.length : 0;
   const qualityScore = paper.quality_report?.score ?? null;
+
+  await deductQuota(userId, 'regenerate', 'paper', paperRecord.id, original.clientType);
 
   return {
     paperId: paperRecord.id,

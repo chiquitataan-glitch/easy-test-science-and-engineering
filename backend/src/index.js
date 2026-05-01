@@ -9,6 +9,7 @@ const generatePaperRoutes = require('./routes/generatePaper');
 const authRoutes = require('./routes/auth');
 const filesRoutes = require('./routes/files');
 const papersRoutes = require('./routes/papers');
+const quotaRoutes = require('./routes/quota');
 
 validateEnv();
 
@@ -24,6 +25,7 @@ app.use('/api', generatePaperRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/files', filesRoutes);
 app.use('/api/papers', papersRoutes);
+app.use('/api/quota', quotaRoutes);
 
 app.get('/health', (req, res) => {
   res.json({
