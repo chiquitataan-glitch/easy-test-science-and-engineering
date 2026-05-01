@@ -1,6 +1,7 @@
 const { chat } = require('./deepseekClient');
 const { renderPrompt } = require('./promptManager');
 const { normalizePaperConfig, buildQuestionConfigText } = require('../config/paperConfig');
+const { validatePaper, buildQualityReport } = require('./paperValidator');
 
 const MAX_TEXT_LENGTH = 6000;
 const MIN_TEXT_LENGTH = 50;
@@ -104,6 +105,21 @@ async function generatePaper(textContent, courseName, configInput) {
       issues: selfCheck.issues,
       skip_reason: selfCheck.skip_reason || null
     };
+
+    const validation = validatePaper(finalPaper, config);
+    const qualityReport = buildQualityReport(validation);
+
+    finalPaper.quality_report = {
+      ...finalPaper.quality_report,
+      score: qualityReport.score,
+      warnings: [
+        ...(finalPaper.quality_report.warnings || []),
+        ...qualityReport.warnings
+      ],
+      suggestions: qualityReport.suggestions || [],
+      summary: qualityReport.summary
+    };
+
     finalPaper.quality_report.prompt_version = GENERATE_PROMPT;
     finalPaper.quality_report.applied_config = config;
 
