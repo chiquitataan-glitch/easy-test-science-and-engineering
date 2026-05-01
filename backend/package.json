@@ -1,13 +1,19 @@
 {
   "name": "easy-test-backend",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "AI试卷生成系统后端",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:seed": "node prisma/seed.js",
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@prisma/client": "^6.0.0",
     "axios": "^1.7.0",
     "dotenv": "^17.4.2",
     "express": "^4.19.0",
@@ -15,5 +21,8 @@
     "multer": "^1.4.4-lts.1",
     "officeparser": "^6.1.1",
     "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "prisma": "^6.0.0"
   }
 }

@@ -1,9 +1,13 @@
 const express = require('express');
 require('dotenv').config();
+const { validateEnv } = require('./config/env');
+const { errorHandler } = require('./middleware/errorHandler');
 const deepseekRoutes = require('./routes/deepseek');
 const uploadRoutes = require('./routes/upload');
 const parseFileRoutes = require('./routes/parseFile');
 const generatePaperRoutes = require('./routes/generatePaper');
+
+validateEnv();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,6 +28,8 @@ app.get('/health', (req, res) => {
     message: 'ok'
   });
 });
+
+app.use(errorHandler);
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend server running on port ${PORT}`);

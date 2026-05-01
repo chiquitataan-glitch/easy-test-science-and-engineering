@@ -1,0 +1,213 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum IdentityProvider {
+  password
+  wechat_mini_program
+  phone
+}
+
+enum ClientType {
+  web
+  wechat_mini_program
+  admin
+}
+
+enum FileStatus {
+  pending
+  parsed
+  failed
+}
+
+enum PaperStatus {
+  pending
+  generating
+  completed
+  failed
+}
+
+enum UsageAction {
+  upload
+  parse
+  generate
+  regenerate
+  quota_grant
+  quota_refund
+}
+
+model User {
+  id            String           @id @default(uuid())
+  displayName   String?
+  avatarUrl     String?
+  quotaBalance  Int              @default(10)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  identities     UserIdentity[]
+  uploadedFiles  UploadedFile[]
+  generatedPapers GeneratedPaper[]
+  quotas         UserQuota[]
+  usageRecords   UsageRecord[]
+}
+
+model UserIdentity {
+  id           String           @id @default(uuid())
+  userId       String
+  provider     IdentityProvider
+  identifier   String
+  passwordHash String?
+  externalId   String?
+  openid       String?
+  unionid      String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, identifier])
+  @@index([externalId])
+  @@index([openid])
+}
+
+model UploadedFile {
+  id              String     @id @default(uuid())
+  userId          String
+  originalName    String
+  mimeType        String
+  size            Int
+  path            String
+  hash            String?
+  storageProvider String     @default("local")
+  storageKey      String?
+  parsedText      String?
+  parsedAt        DateTime?
+  status          FileStatus @default(pending)
+  clientType      ClientType @default(web)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generatedPapers  GeneratedPaper[]
+
+  @@index([userId])
+}
+
+model GeneratedPaper {
+  id                  String      @id @default(uuid())
+  userId              String
+  fileId              String?
+  courseName          String
+  paperTitle          String?
+  paperJson           Json
+  rawResponse         String?
+  parsedTextSnapshot  String?
+  config              Json?
+  qualityReport       Json?
+  knowledgeSummary    Json?
+  promptVersion       String?
+  modelName           String?
+  tokenUsage          Int?
+  status              PaperStatus @default(pending)
+  clientType          ClientType  @default(web)
+  originalPaperId     String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  uploadedFile   UploadedFile?   @relation(fields: [fileId], references: [id], onDelete: SetNull)
+  paperQuestions PaperQuestion[]
+  generationLogs GenerationLog[]
+  originalPaper  GeneratedPaper? @relation("PaperRegeneration", fields: [originalPaperId], references: [id])
+  regenerations  GeneratedPaper[] @relation("PaperRegeneration")
+
+  @@index([userId])
+  @@index([fileId])
+}
+
+model PaperQuestion {
+  id              String   @id @default(uuid())
+  paperId         String
+  questionNo      Int
+  questionType    String
+  content         String
+  options         Json?
+  answer          String
+  analysis        String?
+  knowledgePoints Json?
+  difficulty      String?
+  score           Float?
+
+  paper GeneratedPaper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@index([paperId])
+}
+
+model UserQuota {
+  id          String   @id @default(uuid())
+  userId      String
+  quotaTotal  Int
+  quotaUsed   Int      @default(0)
+  periodStart DateTime @default(now())
+  periodEnd   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+}
+
+model UsageRecord {
+  id           String      @id @default(uuid())
+  userId       String
+  action       UsageAction
+  delta        Int
+  balanceAfter Int
+  clientType   ClientType  @default(web)
+  resourceType String?
+  resourceId   String?
+  createdAt    DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model GenerationLog {
+  id            String   @id @default(uuid())
+  paperId       String
+  status        String
+  errorMessage  String?
+  durationMs    Int?
+  tokenUsage    Int?
+  createdAt     DateTime @default(now())
+
+  paper GeneratedPaper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@index([paperId])
+}
+
+model PromptVersion {
+  id        String   @id @default(uuid())
+  name      String
+  version   String
+  content   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([name, version])
+}
+
+model Plan {
+  id           String   @id @default(uuid())
+  name         String
+  quotaAmount  Int
+  price        Float?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
