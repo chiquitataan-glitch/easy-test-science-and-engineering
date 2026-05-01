@@ -7,6 +7,7 @@ const uploadRoutes = require('./routes/upload');
 const parseFileRoutes = require('./routes/parseFile');
 const generatePaperRoutes = require('./routes/generatePaper');
 const authRoutes = require('./routes/auth');
+const filesRoutes = require('./routes/files');
 
 validateEnv();
 
@@ -20,6 +21,7 @@ app.use('/api', uploadRoutes);
 app.use('/api', parseFileRoutes);
 app.use('/api', generatePaperRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/files', filesRoutes);
 
 app.get('/health', (req, res) => {
   res.json({
