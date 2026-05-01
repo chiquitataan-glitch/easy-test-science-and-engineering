@@ -15,7 +15,7 @@
       </div>
 
       <div class="form-group">
-        <label for="fileInput">上传资料（PDF / DOCX / PPT / PPTX）</label>
+        <label for="fileInput">上传资料（支持 PDF / DOCX / PPT / PPTX）</label>
         <input
           id="fileInput"
           type="file"
@@ -24,11 +24,12 @@
           :disabled="loading"
         />
         <span v-if="selectedFile" class="file-name">{{ selectedFile.name }}</span>
+        <p class="file-hint">最大 20MB，PPT 格式需要 LibreOffice 环境</p>
       </div>
 
       <div class="config-toggle" @click="showConfig = !showConfig">
         <span class="config-arrow">{{ showConfig ? '▼' : '▶' }}</span>
-        出题配置（可选）
+        出题配置（可选，点击展开）
       </div>
 
       <div v-if="showConfig" class="config-panel">
@@ -58,6 +59,10 @@
           />
         </div>
 
+        <div class="config-summary">
+          总题数：<strong>{{ configTotal }}</strong> 道
+        </div>
+
         <div class="config-divider"></div>
         <div class="config-row config-row-header">
           <span>难度</span>
@@ -84,22 +89,39 @@
         @click="handleGenerate"
         :disabled="!canGenerate"
       >
-        {{ loading ? '生成中...' : '生成试卷' }}
+        <span v-if="loading" class="spinner"></span>
+        {{ loading ? ' 正在生成试卷...' : '生成试卷' }}
       </button>
     </div>
 
-    <div v-if="error" class="error">{{ error }}</div>
+    <div v-if="error" class="error-box">
+      <div class="error-icon">⚠️</div>
+      <div class="error-msg">{{ error }}</div>
+    </div>
 
     <div v-if="paperData" class="result-section">
       <div class="result-header">
         <div>
-          <h2>{{ paperData.paper_title }}</h2>
-          <p class="result-meta">共 {{ paperData.questions.length }} 题 · {{ countByType }} · 满分 {{ totalScore }} 分</p>
+          <h2>{{ paperData.paper_title || '试卷' }}</h2>
+          <p class="result-meta">
+            共 {{ safeQuestions.length }} 题 · {{ countByType }} · 满分 {{ totalScore }} 分
+            <span v-if="promptVersion" class="prompt-ver"> | Prompt: {{ promptVersion }}</span>
+          </p>
         </div>
-        <span class="course-tag">{{ paperData.course_name }}</span>
+        <div class="result-tags">
+          <span class="course-tag">{{ paperData.course_name || '' }}</span>
+        </div>
       </div>
 
-      <div v-if="paperData.quality_report?.summary" class="quality-summary">
+      <div v-if="qualityScore !== null" class="quality-score-bar">
+        <div class="score-label">质量评分</div>
+        <div class="score-track">
+          <div class="score-fill" :class="scoreLevel" :style="{ width: qualityScore + '%' }"></div>
+        </div>
+        <div class="score-num" :class="scoreLevel">{{ qualityScore }} 分</div>
+      </div>
+
+      <div v-if="paperData.quality_report?.summary" class="quality-summary" :class="summaryLevel">
         📊 {{ paperData.quality_report.summary }}
       </div>
 
@@ -121,6 +143,20 @@
         </div>
       </div>
 
+      <div v-if="paperData.quality_report?.warnings?.length" class="validator-warnings">
+        <div class="vw-title">⚠️ 校验警告</div>
+        <div v-for="(w, i) in paperData.quality_report.warnings" :key="'vw'+i" class="vw-item">{{ w }}</div>
+      </div>
+
+      <div v-if="paperData.quality_report?.suggestions?.length" class="suggestions-box">
+        <div class="sug-title">💡 建议</div>
+        <div v-for="(s, i) in paperData.quality_report.suggestions" :key="'sg'+i" class="sug-item">{{ s }}</div>
+      </div>
+
+      <div v-if="!safeQuestions.length" class="empty-questions">
+        📝 暂未生成题目，请调整配置后重试
+      </div>
+
       <div v-for="group in questionGroups" :key="group.type" class="type-section">
         <h3 class="type-title">{{ group.label }}（{{ group.questions.length }}题，共{{ group.totalScore }}分）</h3>
 
@@ -134,14 +170,14 @@
           <div class="question-content">{{ q.content }}</div>
 
           <div v-if="q.options && q.options.length" class="options">
-            <div v-for="opt in q.options" :key="opt.key" class="option" :class="{ 'is-answer': opt.key === q.answer }">
+            <div v-for="opt in q.options" :key="opt.key" class="option" :class="{ 'is-answer': isCorrectOption(q, opt.key) }">
               <span class="option-key">{{ opt.key }}.</span>
               <span class="option-value">{{ opt.value }}</span>
-              <span v-if="opt.key === q.answer" class="answer-tag">✓</span>
+              <span v-if="isCorrectOption(q, opt.key)" class="answer-tag">✓</span>
             </div>
           </div>
 
-          <div v-if="q.answer && !q.options" class="answer-line">
+          <div v-if="q.answer && !q.options?.length" class="answer-line">
             <strong>答案：</strong>{{ q.answer }}
           </div>
 
@@ -224,14 +260,46 @@ const canGenerate = computed(() => {
   return courseName.value.trim() && selectedFile.value && !loading.value
 })
 
+const configTotal = computed(() => {
+  return Object.values(config.types).reduce((s, t) => s + t.count, 0)
+})
+
+const promptVersion = computed(() => {
+  return paperData.value?.quality_report?.prompt_version || null
+})
+
+const qualityScore = computed(() => {
+  const s = paperData.value?.quality_report?.score
+  return (s !== undefined && s !== null) ? s : null
+})
+
+const scoreLevel = computed(() => {
+  if (qualityScore.value === null) return ''
+  if (qualityScore.value >= 90) return 'score-high'
+  if (qualityScore.value >= 70) return 'score-mid'
+  return 'score-low'
+})
+
+const summaryLevel = computed(() => {
+  if (qualityScore.value === null) return ''
+  if (qualityScore.value >= 90) return 'quality-good'
+  if (qualityScore.value >= 70) return 'quality-warn'
+  return 'quality-bad'
+})
+
 const selfCheck = computed(() => {
   return paperData.value?.quality_report?.self_check || null
 })
 
+const safeQuestions = computed(() => {
+  const qs = paperData.value?.questions
+  return Array.isArray(qs) ? qs : []
+})
+
 const questionGroups = computed(() => {
-  if (!paperData.value) return []
+  if (!safeQuestions.value.length) return []
   const groups = {}
-  paperData.value.questions.forEach(q => {
+  safeQuestions.value.forEach(q => {
     if (!groups[q.question_type]) groups[q.question_type] = []
     groups[q.question_type].push(q)
   })
@@ -246,22 +314,29 @@ const questionGroups = computed(() => {
 })
 
 const totalScore = computed(() => {
-  if (!paperData.value) return 0
-  return paperData.value.questions.reduce((s, q) => s + (q.score || 0), 0)
+  return safeQuestions.value.reduce((s, q) => s + (q.score || 0), 0)
 })
 
 const countByType = computed(() => {
-  if (!paperData.value) return ''
+  if (!safeQuestions.value.length) return ''
   return TYPE_ORDER
-    .filter(type => paperData.value.questions.some(q => q.question_type === type))
+    .filter(type => safeQuestions.value.some(q => q.question_type === type))
     .map(type => {
-      const count = paperData.value.questions.filter(q => q.question_type === type).length
+      const count = safeQuestions.value.filter(q => q.question_type === type).length
       return `${TYPE_LABELS[type].replace(/^[一二三四五六]、/, '')}${count}道`
     })
     .join(' · ')
 })
 
 const difficultyLabel = (d) => DIFFICULTY_LABELS[d] || d
+
+const isCorrectOption = (q, key) => {
+  if (!q.answer) return false
+  if (q.question_type === 'multi_choice') {
+    return q.answer.split(',').map(s => s.trim()).includes(key)
+  }
+  return q.answer === key
+}
 
 const handleFileChange = (e) => {
   selectedFile.value = e.target.files[0]
