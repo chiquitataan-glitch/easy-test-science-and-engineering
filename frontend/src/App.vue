@@ -26,6 +26,59 @@
         <span v-if="selectedFile" class="file-name">{{ selectedFile.name }}</span>
       </div>
 
+      <div class="config-toggle" @click="showConfig = !showConfig">
+        <span class="config-arrow">{{ showConfig ? '▼' : '▶' }}</span>
+        出题配置（可选）
+      </div>
+
+      <div v-if="showConfig" class="config-panel">
+        <div class="config-row config-row-header">
+          <span>题型</span>
+          <span>数量</span>
+          <span>分值</span>
+        </div>
+        <div v-for="t in configTypes" :key="t.key" class="config-row">
+          <span class="config-type-label">{{ t.label }}</span>
+          <input
+            type="number"
+            min="0"
+            max="50"
+            :value="config.types[t.key].count"
+            @input="e => updateTypeCount(t.key, parseInt(e.target.value) || 0)"
+            :disabled="loading"
+          />
+          <input
+            type="number"
+            min="0.5"
+            max="100"
+            step="0.5"
+            :value="config.types[t.key].score"
+            @input="e => updateTypeScore(t.key, parseFloat(e.target.value) || 0)"
+            :disabled="loading"
+          />
+        </div>
+
+        <div class="config-divider"></div>
+        <div class="config-row config-row-header">
+          <span>难度</span>
+          <span>比例</span>
+          <span></span>
+        </div>
+        <div v-for="d in configDifficulties" :key="d.key" class="config-row">
+          <span class="config-type-label">{{ d.label }}</span>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="5"
+            :value="Math.round(config.difficulty[d.key] * 100)"
+            @input="e => updateDifficulty(d.key, (parseInt(e.target.value) || 0) / 100)"
+            :disabled="loading"
+          />
+          <span>%</span>
+        </div>
+      </div>
+
       <button
         class="btn-generate"
         @click="handleGenerate"
@@ -97,11 +150,7 @@
           </div>
 
           <div v-if="q.knowledge_points && q.knowledge_points.length" class="knowledge-points">
-            <span
-              v-for="kp in q.knowledge_points"
-              :key="kp"
-              class="kp-tag"
-            >{{ kp }}</span>
+            <span v-for="kp in q.knowledge_points" :key="kp" class="kp-tag">{{ kp }}</span>
           </div>
         </div>
       </div>
@@ -110,7 +159,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, reactive, computed } from 'vue'
 
 const TYPE_LABELS = {
   single_choice: '一、单选题',
@@ -129,11 +178,47 @@ const DIFFICULTY_LABELS = {
   hard: '困难'
 }
 
+const configTypes = [
+  { key: 'single_choice', label: '单选题' },
+  { key: 'multi_choice', label: '多选题' },
+  { key: 'fill_blank', label: '填空题' },
+  { key: 'true_false', label: '判断题' },
+  { key: 'calculation', label: '计算题' },
+  { key: 'short_answer', label: '简答题' }
+]
+
+const configDifficulties = [
+  { key: 'easy', label: '简单' },
+  { key: 'medium', label: '中等' },
+  { key: 'hard', label: '困难' }
+]
+
 const courseName = ref('')
 const selectedFile = ref(null)
 const loading = ref(false)
 const error = ref('')
 const paperData = ref(null)
+const showConfig = ref(false)
+
+const config = reactive({
+  types: {
+    single_choice: { count: 8, score: 5 },
+    multi_choice: { count: 2, score: 5 },
+    fill_blank: { count: 10, score: 2 },
+    true_false: { count: 10, score: 1 },
+    calculation: { count: 4, score: 3 },
+    short_answer: { count: 2, score: 4 }
+  },
+  difficulty: {
+    easy: 0.3,
+    medium: 0.5,
+    hard: 0.2
+  }
+})
+
+const updateTypeCount = (key, val) => { config.types[key].count = val }
+const updateTypeScore = (key, val) => { config.types[key].score = val }
+const updateDifficulty = (key, val) => { config.difficulty[key] = val }
 
 const canGenerate = computed(() => {
   return courseName.value.trim() && selectedFile.value && !loading.value
@@ -147,9 +232,7 @@ const questionGroups = computed(() => {
   if (!paperData.value) return []
   const groups = {}
   paperData.value.questions.forEach(q => {
-    if (!groups[q.question_type]) {
-      groups[q.question_type] = []
-    }
+    if (!groups[q.question_type]) groups[q.question_type] = []
     groups[q.question_type].push(q)
   })
   return TYPE_ORDER
@@ -185,6 +268,24 @@ const handleFileChange = (e) => {
   error.value = ''
 }
 
+const configToApi = () => {
+  return {
+    types: {
+      single_choice: { count: config.types.single_choice.count, score: config.types.single_choice.score },
+      multi_choice: { count: config.types.multi_choice.count, score: config.types.multi_choice.score },
+      fill_blank: { count: config.types.fill_blank.count, score: config.types.fill_blank.score },
+      true_false: { count: config.types.true_false.count, score: config.types.true_false.score },
+      calculation: { count: config.types.calculation.count, score: config.types.calculation.score },
+      short_answer: { count: config.types.short_answer.count, score: config.types.short_answer.score }
+    },
+    difficulty: {
+      easy: config.difficulty.easy,
+      medium: config.difficulty.medium,
+      hard: config.difficulty.hard
+    }
+  }
+}
+
 const handleGenerate = async () => {
   if (!canGenerate.value) return
 
@@ -208,13 +309,19 @@ const handleGenerate = async () => {
       return
     }
 
+    const generateReq = {
+      filePath: uploadData.data.path,
+      courseName: courseName.value.trim()
+    }
+
+    if (showConfig.value) {
+      generateReq.config = configToApi()
+    }
+
     const generateRes = await fetch('/api/generate-paper', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        filePath: uploadData.data.path,
-        courseName: courseName.value.trim()
-      })
+      body: JSON.stringify(generateReq)
     })
     const generateData = await generateRes.json()
 

@@ -1,5 +1,6 @@
 const { chat } = require('./deepseekClient');
 const { renderPrompt } = require('./promptManager');
+const { normalizePaperConfig, buildQuestionConfigText } = require('../config/paperConfig');
 
 const MAX_TEXT_LENGTH = 6000;
 const MIN_TEXT_LENGTH = 50;
@@ -63,15 +64,19 @@ async function selfCheckPaper(paper) {
   }
 }
 
-async function generatePaper(textContent, courseName) {
+async function generatePaper(textContent, courseName, configInput) {
   if (!textContent || textContent.trim().length < MIN_TEXT_LENGTH) {
     throw new Error('文本内容太短，无法生成试卷');
   }
 
+  const config = normalizePaperConfig(configInput);
   const truncatedText = textContent.substring(0, MAX_TEXT_LENGTH);
+  const questionConfig = buildQuestionConfigText(config);
+
   const prompt = renderPrompt(GENERATE_PROMPT, {
     course_name: courseName,
-    source_text: truncatedText
+    source_text: truncatedText,
+    question_config: questionConfig
   });
 
   try {
@@ -100,6 +105,7 @@ async function generatePaper(textContent, courseName) {
       skip_reason: selfCheck.skip_reason || null
     };
     finalPaper.quality_report.prompt_version = GENERATE_PROMPT;
+    finalPaper.quality_report.applied_config = config;
 
     return finalPaper;
   } catch (error) {

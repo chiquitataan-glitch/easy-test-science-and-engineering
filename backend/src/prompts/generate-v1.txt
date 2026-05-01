@@ -29,21 +29,24 @@
   }
 }
 
+{{question_config}}
+
 question_type 仅限以下6种：
-- single_choice（单选题，共8道，每题5分，每题4个选项）
-- multi_choice（多选题，共2道，每题5分，每题4个选项）
-- fill_blank（填空题，共10道，每题2分）
-- true_false（判断题，共10道，每题1分，答案填"√"或"×"）
-- calculation（计算题，共4道，每题3分，answer字段写计算过程）
-- short_answer（简答题，共2道，每题4分）
+- single_choice：单选题，每题4个选项
+- multi_choice：多选题，每题4个选项，answer 至少两个字母用逗号分隔如"A,C"
+- fill_blank：填空题
+- true_false：判断题，答案填"√"或"×"
+- calculation：计算题，answer字段写计算步骤
+- short_answer：简答题，answer字段写评分要点
 
 要求：
-1. 知识点必须来自课程资料
-2. difficulty 值：easy / medium / hard
-3. 答案必须准确
-4. analysis 写解析
-5. quality_report.summary 写 30 字内总结
-6. 只返回纯 JSON，不要有任何额外内容
+1. 严格按照配置中指定的各题型数量和分值生成题目
+2. 知识点必须来自课程资料
+3. difficulty 值：easy / medium / hard，严格按照配置的比例分配
+4. 答案必须准确
+5. analysis 写解析
+6. quality_report.summary 写 30 字内总结
+7. 只返回纯 JSON，不要有任何额外内容
 
 【课程资料】
 {{source_text}}
