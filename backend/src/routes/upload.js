@@ -1,10 +1,9 @@
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
+const { getFileExtension, isAllowedExtension, errorMessage } = require('../config/fileTypes');
 
 const router = express.Router();
 
-const ALLOWED_TYPES = ['.pdf', '.docx'];
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
 const storage = multer.diskStorage({
@@ -17,11 +16,11 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const ext = path.extname(file.originalname).toLowerCase();
-  if (ALLOWED_TYPES.includes(ext)) {
+  const ext = getFileExtension(file.originalname);
+  if (isAllowedExtension(file.originalname)) {
     cb(null, true);
   } else {
-    cb(new Error('仅支持 PDF 和 DOCX 文件'), false);
+    cb(new Error(errorMessage()), false);
   }
 };
 
@@ -46,7 +45,7 @@ router.post('/upload', upload.single('file'), (req, res) => {
     data: {
       originalName: req.file.originalname,
       size: req.file.size,
-      type: path.extname(req.file.originalname).toLowerCase(),
+      type: getFileExtension(req.file.originalname),
       path: req.file.path
     },
     message: 'ok'
@@ -54,7 +53,7 @@ router.post('/upload', upload.single('file'), (req, res) => {
 });
 
 router.use((err, req, res, next) => {
-  if (err.message === '仅支持 PDF 和 DOCX 文件') {
+  if (err.message === errorMessage()) {
     return res.status(400).json({
       success: false,
       message: err.message

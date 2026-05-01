@@ -1,4 +1,4 @@
-const axios = require('axios');
+const { chat } = require('./deepseekClient');
 
 const MAX_TEXT_LENGTH = 6000;
 const MIN_TEXT_LENGTH = 50;
@@ -112,38 +112,13 @@ function parseJsonFromResponse(content) {
   return null;
 }
 
-async function callDeepSeek(messages, maxTokens, temperature, timeout) {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-
-  const response = await axios.post(
-    'https://api.deepseek.com/v1/chat/completions',
-    {
-      model: 'deepseek-chat',
-      messages,
-      max_tokens: maxTokens,
-      temperature
-    },
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      timeout
-    }
-  );
-
-  return response.data.choices[0].message.content;
-}
-
 async function selfCheckPaper(paper) {
   const selfCheckPrompt = buildSelfCheckPrompt(paper);
 
   try {
-    const content = await callDeepSeek(
+    const content = await chat(
       [{ role: 'user', content: selfCheckPrompt }],
-      8192,
-      0.1,
-      SELF_CHECK_TIMEOUT
+      { max_tokens: 8192, temperature: 0.1, timeout: SELF_CHECK_TIMEOUT }
     );
 
     const result = parseJsonFromResponse(content);
@@ -158,7 +133,7 @@ async function selfCheckPaper(paper) {
       fixed_paper: result.fixed_paper || paper
     };
   } catch (error) {
-    if (error.code === 'ECONNABORTED' || (error.message && error.message.includes('timeout'))) {
+    if (error.message.includes('超时')) {
       return { passed: true, issues: [], fixed_paper: paper, skip_reason: '自检超时' };
     }
     return { passed: true, issues: [], fixed_paper: paper, skip_reason: '自检调用失败' };
@@ -170,21 +145,13 @@ async function generatePaper(textContent, courseName) {
     throw new Error('文本内容太短，无法生成试卷');
   }
 
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-
-  if (!apiKey) {
-    throw new Error('DeepSeek API Key 未配置');
-  }
-
   const truncatedText = textContent.substring(0, MAX_TEXT_LENGTH);
   const prompt = buildPrompt(truncatedText, courseName);
 
   try {
-    const content = await callDeepSeek(
+    const content = await chat(
       [{ role: 'user', content: prompt }],
-      8192,
-      0.3,
-      120000
+      { max_tokens: 8192, temperature: 0.3, timeout: 120000 }
     );
 
     const paper = parseJsonFromResponse(content);
@@ -209,17 +176,7 @@ async function generatePaper(textContent, courseName) {
 
     return finalPaper;
   } catch (error) {
-    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-      throw new Error('DeepSeek API 调用超时');
-    }
-    if (error.message.includes('JSON')) {
-      throw error;
-    }
-    if (error.message.includes('DeepSeek API Key')) {
-      throw error;
-    }
-    const detail = error.response?.data?.error?.message || error.message;
-    throw new Error(`试卷生成失败：${detail}`);
+    throw error;
   }
 }
 
