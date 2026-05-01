@@ -1,9 +1,19 @@
 const express = require('express');
+require('dotenv').config();
+const deepseekRoutes = require('./routes/deepseek');
+const uploadRoutes = require('./routes/upload');
+const parseFileRoutes = require('./routes/parseFile');
+const generatePaperRoutes = require('./routes/generatePaper');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+
+app.use('/api', deepseekRoutes);
+app.use('/api', uploadRoutes);
+app.use('/api', parseFileRoutes);
+app.use('/api', generatePaperRoutes);
 
 app.get('/health', (req, res) => {
   res.json({
