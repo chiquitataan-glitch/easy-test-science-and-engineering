@@ -15,11 +15,11 @@
       </div>
 
       <div class="form-group">
-        <label for="fileInput">上传资料（PDF / DOCX）</label>
+        <label for="fileInput">上传资料（PDF / DOCX / PPT / PPTX）</label>
         <input
           id="fileInput"
           type="file"
-          accept=".pdf,.docx"
+          accept=".pdf,.docx,.ppt,.pptx"
           @change="handleFileChange"
           :disabled="loading"
         />

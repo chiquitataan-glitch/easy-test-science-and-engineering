@@ -1,10 +1,14 @@
 const { getFileExtension, isAllowedExtension } = require('../../config/fileTypes');
 const { extractPdfText } = require('../pdfExtractor');
 const { extractDocxText } = require('../docxExtractor');
+const { extractPptxText } = require('./pptxParser');
+const { extractPptText } = require('./pptParser');
 
 const PARSER_MAP = {
   '.pdf': extractPdfText,
-  '.docx': extractDocxText
+  '.docx': extractDocxText,
+  '.pptx': extractPptxText,
+  '.ppt': extractPptText
 };
 
 async function parseFile(filePath) {

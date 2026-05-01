@@ -27,7 +27,28 @@
 - 前端：宿主5173 -> 容器5173
 - 后端：宿主3000 -> 容器3000
 
-## 开发调试
+## 系统依赖说明
+
+### LibreOffice（解析 .ppt 文件）
+
+后端 Docker 镜像包含 LibreOffice Impress，用于将老格式 `.ppt` 文件转换为 `.pptx` 后再提取文本。
+
+- Docker 环境：已内置在 Dockerfile 中，`docker compose up --build` 自动安装
+- 本地环境：需要手动安装 LibreOffice
+  - Windows：从 https://www.libreoffice.org/download/ 下载安装
+  - macOS：`brew install --cask libreoffice`
+  - Linux：`sudo apt-get install libreoffice-impress`
+
+> 如果本地未安装 LibreOffice，上传 `.ppt` 文件时会返回错误提示，请使用 `.pptx` 格式代替。
+
+## 文件上传说明
+
+- `pdf`：纯 JS 解析，无需系统依赖
+- `docx`：纯 JS 解析，无需系统依赖
+- `pptx`：纯 JS 解析，无需系统依赖
+- `ppt`：依赖 LibreOffice 转换为 `.pptx` 后解析
+
+## 调试技巧
 
 ### 进入后端容器
 ```bash

@@ -1,13 +1,15 @@
 const path = require('path');
 
-const ALLOWED_EXTENSIONS = ['.pdf', '.docx'];
+const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.ppt', '.pptx'];
 
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation'
 ];
 
-const LABEL = 'PDF / DOCX';
+const LABEL = 'PDF / DOCX / PPT / PPTX';
 
 function isAllowedExtension(filePath) {
   const ext = path.extname(filePath).toLowerCase();
