@@ -8,6 +8,7 @@ const parseFileRoutes = require('./routes/parseFile');
 const generatePaperRoutes = require('./routes/generatePaper');
 const authRoutes = require('./routes/auth');
 const filesRoutes = require('./routes/files');
+const papersRoutes = require('./routes/papers');
 
 validateEnv();
 
@@ -22,6 +23,7 @@ app.use('/api', parseFileRoutes);
 app.use('/api', generatePaperRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/files', filesRoutes);
+app.use('/api/papers', papersRoutes);
 
 app.get('/health', (req, res) => {
   res.json({
