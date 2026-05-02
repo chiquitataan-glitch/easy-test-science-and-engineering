@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const { requireAuth } = require('../middleware/auth');
 const { getFileExtension, isAllowedExtension, errorMessage } = require('../config/fileTypes');
 
 const router = express.Router();
@@ -32,7 +33,7 @@ const upload = multer({
   }
 });
 
-router.post('/upload', upload.single('file'), (req, res) => {
+router.post('/upload', requireAuth, upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({
       success: false,

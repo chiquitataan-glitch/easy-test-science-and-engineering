@@ -1,5 +1,68 @@
 # Changelog
 
+## [0.5.0] - 2026-05-02
+
+### Added
+- 用户注册/登录（JWT + bcrypt），`POST /api/auth/register`、`POST /api/auth/login`
+- `GET /api/auth/me` 当前用户信息、`POST /api/auth/logout` 退出
+- `POST /api/auth/wechat-mini-program-login` V1.0 预留占位（返回 501）
+- `requireAuth` / `optionalAuth` Express 鉴权中间件
+- JWT token payload 包含 `sub`/`userId`/`clientType`/`identityProvider`
+- PostgreSQL 16 + Prisma ORM（10 张表，5 个枚举）
+- `users` + `user_identities` 用户身份分离模型（支持 password/wechat/phone）
+- `uploaded_files` 文件记录持久化，用户资源隔离
+- `generated_papers` 试卷持久化，`paper_json`/`config`/`quality_report` JSONB 存储
+- `paper_questions` 题目拆分入库
+- `user_quotas` + `usage_records` 额度控制，Prisma 事务防并发超扣
+- `generation_logs` 生成日志（duration/error/token_usage）
+- `prompt_versions` 表 + seed 脚本
+- `plans` 表 V1.0 预留
+- `POST /api/files/upload`（鉴权版）上传入库 + 自动解析
+- `GET /api/files` 文件列表、`GET /api/files/:id` 详情、`DELETE /api/files/:id` 删除
+- `POST /api/papers/generate` 生成入库 + 关联文件
+- `GET /api/papers` 历史列表（分页）、`GET /api/papers/:id` 完整详情
+- `POST /api/papers/:id/regenerate` 重新生成（`original_paper_id` 关联）
+- `GET /api/quota/me` 额度查询、`GET /api/quota/usage-records` 使用流水
+- 统一响应工具（`successResponse`/`errorResponse`）+ 13 个错误码
+- 全局错误处理中间件 + `AppError` 类体系
+- 环境变量校验（启动时检查必填项）
+- 前端 `/login`、`/register` 页面
+- 前端 `/papers` 历史列表、`/papers/:id` 详情 + 重新生成
+- 前端 `/profile` 个人中心 + 额度进度条
+- 前端 NavBar（登录态/用户名/quota/退出）+ 路由守卫 + localStorage 恢复
+- `apiClient` fetch 封装（自动 Authorization + 401 跳转）
+- `PaperContent.vue` 可复用试卷展示组件
+- `authStore` 轻量 reactive 状态管理
+
+### Changed
+- 后端路由目录重构：新增 `routes/auth.js`、`routes/files.js`、`routes/papers.js`、`routes/quota.js`
+- `src/index.js` 挂载全量路由 + `validateEnv()` + `errorHandler`
+- `paperService.js`：`generateAndSave` / `regeneratePaper` 注入 quota 检查扣减
+- `docker-compose.yml` 新增 `postgres` 容器 + `pgdata` volume
+- 后端 `Dockerfile`：CMD 增加 `prisma migrate deploy` 自动执行
+- `backend/package.json`：新增 `@prisma/client`、`prisma`、`bcryptjs`、`jsonwebtoken`
+- `backend/.env.example` 从 2 个变量扩展到 19 个
+- 前端 `package.json`：新增 `vue-router`
+- `README.md` 更新至 V0.5 功能列表
+- `docs/API.md` 完整重写（17 个接口，5 个模块）
+
+### Fixed
+- CHANGELOG.md 重复的 `[0.1.0]` 版本块（修复于 V0.5 启动前）
+
+### Known Issues
+- 无自动化测试覆盖
+- `deepseek-chat` 对 Vision API 支持因区域而异
+- PPT 解析依赖 LibreOffice（镜像 +400MB）
+- Token 存储于 localStorage（有 XSS 风险，V1.0 建议 CSP + httpOnly refresh token）
+- V0.5 不做 refresh token，access token 过期需重新登录
+
+### Dependencies
+- 新增：`@prisma/client ^6.0.0`、`prisma ^6.0.0`（dev）
+- 新增：`bcryptjs ^2.4.3`、`jsonwebtoken ^9.0.0`
+- 新增：`vue-router ^4.3.0`
+- 新增：`postgres:16-alpine`（Docker 服务）
+- 保留：V0.2 全部依赖（express、axios、pdf-parse、mammoth、officeparser、multer、vue 3、vite 5）
+
 ## [0.2.0] - 2026-05-01
 
 ### Added

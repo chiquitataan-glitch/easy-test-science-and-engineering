@@ -1,9 +1,10 @@
 const express = require('express');
+const { requireAuth } = require('../middleware/auth');
 const { chat } = require('../services/deepseekClient');
 
 const router = express.Router();
 
-router.post('/test-deepseek', async (req, res) => {
+router.post('/test-deepseek', requireAuth, async (req, res) => {
   const { message } = req.body;
 
   if (!message) {

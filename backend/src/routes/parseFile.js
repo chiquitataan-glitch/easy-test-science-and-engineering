@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { requireAuth } = require('../middleware/auth');
 const { getFileExtension, isAllowedExtension, LABEL } = require('../config/fileTypes');
 const { parseFile } = require('../services/parsers');
 
@@ -8,7 +9,13 @@ const router = express.Router();
 
 const PREVIEW_LENGTH = 1000;
 
-router.post('/parse-file', async (req, res) => {
+function isSafePath(filePath) {
+  const resolved = path.resolve(filePath);
+  const uploadsDir = path.resolve(process.env.UPLOAD_DIR || './uploads');
+  return resolved.startsWith(uploadsDir);
+}
+
+router.post('/parse-file', requireAuth, async (req, res) => {
   const { filePath } = req.body;
 
   if (!filePath) {
@@ -30,6 +37,13 @@ router.post('/parse-file', async (req, res) => {
       return res.status(400).json({
         success: false,
         message: '文件不存在'
+      });
+    }
+
+    if (!isSafePath(filePath)) {
+      return res.status(400).json({
+        success: false,
+        message: '无效的文件路径'
       });
     }
 

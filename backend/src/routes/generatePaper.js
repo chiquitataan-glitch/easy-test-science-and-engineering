@@ -1,5 +1,7 @@
 const express = require('express');
 const fs = require('fs');
+const path = require('path');
+const { requireAuth } = require('../middleware/auth');
 const { isAllowedExtension, LABEL } = require('../config/fileTypes');
 const { parseFile } = require('../services/parsers');
 const { generatePaper } = require('../services/paperGenerator');
@@ -7,7 +9,13 @@ const { normalizePaperConfig } = require('../config/paperConfig');
 
 const router = express.Router();
 
-router.post('/generate-paper', async (req, res) => {
+function isSafePath(filePath) {
+  const resolved = path.resolve(filePath);
+  const uploadsDir = path.resolve(process.env.UPLOAD_DIR || './uploads');
+  return resolved.startsWith(uploadsDir);
+}
+
+router.post('/generate-paper', requireAuth, async (req, res) => {
   const { filePath, courseName, config } = req.body;
 
   if (!filePath) {
@@ -44,6 +52,13 @@ router.post('/generate-paper', async (req, res) => {
     return res.status(400).json({
       success: false,
       message: '文件不存在'
+    });
+  }
+
+  if (!isSafePath(filePath)) {
+    return res.status(400).json({
+      success: false,
+      message: '无效的文件路径'
     });
   }
 

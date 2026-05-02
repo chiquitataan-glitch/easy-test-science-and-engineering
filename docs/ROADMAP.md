@@ -24,22 +24,36 @@
 - [x] 知识点提取与覆盖统计
 - [x] 前端结构化展示优化
 
-## V0.5 MVP 可用版
+## V0.5 MVP 可用版 (已完成)
 
-目标：用户系统 + 数据持久化
+目标：用户系统 + 数据持久化 + 产品雏形
 
-- [ ] 用户登录
-- [ ] MySQL 数据库
-- [ ] 试卷历史记录
-- [ ] PDF 导出
-- [ ] API 限流
+- [x] 用户注册/登录（JWT + bcrypt）
+- [x] PostgreSQL + Prisma ORM（10 表 + 5 枚举）
+- [x] 用户身份分离模型（users + user_identities）
+- [x] 文件记录持久化 + 用户资源隔离
+- [x] 试卷生成历史 + 详情查看
+- [x] 试卷重新生成（original_paper_id 关联）
+- [x] 题目拆分入库（paper_questions）
+- [x] quota 额度控制（Prisma 事务防并发）
+- [x] 使用流水记录（usage_records）
+- [x] 生成日志（generation_logs）
+- [x] 前端路由 + 登录态 + 6 页面
+- [x] Docker Compose 新增 postgres 容器
+- [x] Migration / Seed 自动化
 
 ## V1.0 正式商业版
 
-目标：后台 + 计费 + 部署
+目标：微信小程序 + 支付 + 生产部署
 
+- [ ] 微信小程序前端（uni-app 或原生）
+- [ ] 微信登录（openid/unionid → user_identities）
+- [ ] 多端 token 复用（web / wechat_mini_program / admin）
+- [ ] 支付购买额度（plans 表已预留）
+- [ ] 对象存储（storage_provider/storage_key 已预留）
+- [ ] API 限流（express-rate-limit）
+- [ ] PDF 导出
 - [ ] 管理后台
 - [ ] 成本统计
-- [ ] 微信登录
-- [ ] 付费/订阅
-- [ ] 生产部署
+- [ ] 生产部署（HTTPS / 域名 / 监控）
+- [ ] 自动化测试

@@ -54,8 +54,17 @@ async function chat(messages, options = {}) {
       throw new Error('DeepSeek API 调用超时');
     }
 
-    const detail = error.response?.data?.error?.message || error.message;
-    throw new Error(`DeepSeek API 调用失败：${detail}`);
+    const status = error.response?.status;
+    if (status === 401 || status === 403) {
+      throw new Error('DeepSeek API 认证失败，请检查 API Key');
+    }
+    if (status === 429) {
+      throw new Error('DeepSeek API 请求过于频繁，请稍后重试');
+    }
+    if (status === 400) {
+      throw new Error('DeepSeek API 请求参数错误，请检查输入内容');
+    }
+    throw new Error('DeepSeek API 调用失败，请稍后重试');
   }
 }
 
