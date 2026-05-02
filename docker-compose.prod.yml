@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ./data/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - easy-test-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: easytest-backend:prod
+    restart: unless-stopped
+    volumes:
+      - ./data/uploads:/app/uploads
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-24h}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-20971520}
+      - UPLOAD_DIR=/app/uploads
+      - DEFAULT_USER_QUOTA=${DEFAULT_USER_QUOTA:-10}
+      - STORAGE_PROVIDER=local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - easy-test-network
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    image: easytest-nginx:prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./data/uploads:/usr/share/nginx/html/uploads:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+    networks:
+      - easy-test-network
+
+networks:
+  easy-test-network:
+    driver: bridge
