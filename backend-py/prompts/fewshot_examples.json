@@ -1,0 +1,410 @@
+{
+  "version": "1.0",
+  "description": "Few-shot 真题示例库，按学科和题型组织，用于 Prompt 模板中的示例引导",
+  "subjects": {
+    "math": {
+      "single_choice": [
+        {
+          "content": "设函数 f(x) = x³ - 3x + 1，则 f(x) 在区间 [-2, 2] 上的最大值与最小值之差为（  ）",
+          "options": [
+            { "key": "A", "value": "4" },
+            { "key": "B", "value": "6" },
+            { "key": "C", "value": "8" },
+            { "key": "D", "value": "10" }
+          ],
+          "answer": "A",
+          "analysis": "f'(x) = 3x² - 3 = 3(x+1)(x-1)，驻点为 x = ±1。计算端点及驻点值：f(-2) = -8+6+1 = -1，f(-1) = -1+3+1 = 3，f(1) = 1-3+1 = -1，f(2) = 8-6+1 = 3。因此 f(x) 在 [-2, 2] 上的最大值为 3，最小值为 -1，最大值与最小值之差为 3 - (-1) = 4。",
+          "knowledge_points": ["导数求极值", "闭区间上连续函数的最值"],
+          "difficulty": "medium"
+        },
+        {
+          "content": "已知矩阵 A 为 3 阶方阵且 |A| = 2，则 |2A| 的值为（  ）",
+          "options": [
+            { "key": "A", "value": "4" },
+            { "key": "B", "value": "8" },
+            { "key": "C", "value": "16" },
+            { "key": "D", "value": "32" }
+          ],
+          "answer": "C",
+          "analysis": "对于 n 阶方阵 A，有 |kA| = kⁿ|A|。本题 n=3, k=2, |A|=2，故 |2A| = 2³ × 2 = 8 × 2 = 16。",
+          "knowledge_points": ["行列式的性质", "矩阵数乘对行列式的影响"],
+          "difficulty": "easy"
+        }
+      ],
+      "multi_choice": [
+        {
+          "content": "下列关于极限的说法中，正确的有（  ）",
+          "options": [
+            { "key": "A", "value": "若 lim(x→x₀) f(x) 存在，则 f(x) 在 x₀ 处连续" },
+            { "key": "B", "value": "若 f(x) 在 x₀ 处可导，则 f(x) 在 x₀ 处连续" },
+            { "key": "C", "value": "若 lim(x→∞) f(x) = A，则 y = A 是曲线的水平渐近线" },
+            { "key": "D", "value": "有界函数与无穷小的乘积仍是无穷小" }
+          ],
+          "answer": "B,C,D",
+          "analysis": "A 错误：极限存在不一定连续，还需极限值等于函数值。B 正确：可导必连续。C 正确：这是水平渐近线的定义。D 正确：有界函数乘无穷小仍为无穷小。",
+          "knowledge_points": ["函数极限与连续的关系", "可导与连续的关系", "渐近线的定义", "无穷小的性质"],
+          "difficulty": "medium"
+        }
+      ],
+      "fill_blank": [
+        {
+          "content": "定积分 ∫₀¹ (2x + 1) dx = ______。",
+          "options": [],
+          "answer": "2",
+          "analysis": "∫₀¹ (2x + 1)dx = [x² + x]₀¹ = (1 + 1) - (0 + 0) = 2。",
+          "knowledge_points": ["定积分的计算", "牛顿-莱布尼茨公式"],
+          "difficulty": "easy"
+        }
+      ],
+      "short_answer": [
+        {
+          "content": "用拉格朗日中值定理证明：当 x > 0 时，x/(1+x) < ln(1+x) < x。",
+          "options": [],
+          "answer": "证明：设 f(t) = ln(1+t)，在 [0, x] 上满足拉格朗日中值定理条件。存在 ξ ∈ (0, x)，使 f(x)-f(0) = f'(ξ)(x-0)，即 ln(1+x) = x/(1+ξ)。由 0 < ξ < x 得 1 < 1+ξ < 1+x，故 x/(1+x) < x/(1+ξ) < x，即 x/(1+x) < ln(1+x) < x。证毕。",
+          "analysis": "关键步骤：构造函数 f(t)=ln(1+t)，利用拉格朗日中值定理找到 ξ，再结合 ξ 的范围进行不等式放缩。",
+          "knowledge_points": ["拉格朗日中值定理", "不等式证明", "对数函数的性质"],
+          "difficulty": "hard"
+        }
+      ],
+      "essay": [
+        {
+          "content": "论述定积分在物理学中的应用，以变力做功和液体压力计算为例，阐述微元法的核心思想，并说明定积分应用的一般步骤。",
+          "options": [],
+          "answer": "一、微元法的核心思想：将连续变化的量分割为无穷多个微小部分，在每个微元上用常量近似，然后求和取极限得到定积分。二、变力做功：物体在变力 F(x) 作用下沿直线从 a 移动到 b，功 W = ∫ₐᵇ F(x)dx。例如弹簧弹力 F=kx，从平衡位置拉伸 A，做功 W = ∫₀ᴬ kx dx = ½kA²。三、液体压力：垂直浸入液体中的平板所受压力 P = ∫ₐᵇ ρg·h(x)·w(x)dx，其中 ρ 为液体密度，h(x) 为深度函数，w(x) 为宽度函数。四、一般步骤：(1)建立坐标系；(2)取微元并写出微元量的近似表达式；(3)确定积分区间；(4)计算定积分；(5)对结果进行物理解释。",
+          "analysis": "本题考察定积分应用的综合理解，要求从方法论高度阐述微元法的思想本质，并结合具体物理模型展示应用过程。评分要点：微元法思想（40%）、变力做功推导（25%）、液体压力推导（25%）、一般步骤总结（10%）。",
+          "knowledge_points": ["定积分的物理应用", "微元法", "变力做功", "液体压力计算"],
+          "difficulty": "hard",
+          "is_cross_doc": true
+        }
+      ]
+    },
+    "cs": {
+      "single_choice": [
+        {
+          "content": "在二叉搜索树中查找一个元素的时间复杂度，最坏情况下为（  ）",
+          "options": [
+            { "key": "A", "value": "O(1)" },
+            { "key": "B", "value": "O(log n)" },
+            { "key": "C", "value": "O(n)" },
+            { "key": "D", "value": "O(n log n)" }
+          ],
+          "answer": "C",
+          "analysis": "二叉搜索树在退化为链表（即插入元素有序）时，查找操作需要遍历所有节点，最坏时间复杂度为 O(n)。平衡二叉搜索树（如 AVL、红黑树）可以保证 O(log n)。",
+          "knowledge_points": ["二叉搜索树", "时间复杂度分析", "最坏情况分析"],
+          "difficulty": "easy"
+        }
+      ],
+      "multi_choice": [
+        {
+          "content": "以下关于 TCP 协议的说法中，正确的有（  ）",
+          "options": [
+            { "key": "A", "value": "TCP 提供面向连接的可靠数据传输服务" },
+            { "key": "B", "value": "TCP 使用三次握手建立连接" },
+            { "key": "C", "value": "TCP 的流量控制通过滑动窗口机制实现" },
+            { "key": "D", "value": "TCP 的拥塞控制算法包括慢启动和拥塞避免" }
+          ],
+          "answer": "A,B,C,D",
+          "analysis": "以上四项均为 TCP 协议的核心特性：面向连接、可靠传输、三次握手、滑动窗口流量控制、慢启动/拥塞避免/快速重传/快速恢复等拥塞控制算法。",
+          "knowledge_points": ["TCP 协议特性", "三次握手", "滑动窗口", "拥塞控制算法"],
+          "difficulty": "medium"
+        }
+      ],
+      "fill_blank": [
+        {
+          "content": "在 Python 中，使用列表推导式生成 1 到 100 中所有偶数的平方，代码为：[______ for x in range(1, 101) if x % 2 == 0]",
+          "options": [],
+          "answer": "x**2",
+          "analysis": "列表推导式语法为 [表达式 for 变量 in 可迭代对象 if 条件]。x % 2 == 0 筛选偶数，x**2 计算平方。",
+          "knowledge_points": ["Python 列表推导式", "条件筛选"],
+          "difficulty": "easy"
+        }
+      ],
+      "short_answer": [
+        {
+          "content": "请简述死锁产生的四个必要条件，并说明预防死锁的常用策略。",
+          "options": [],
+          "answer": "死锁的四个必要条件：(1)互斥条件：资源不能被共享，一次只能被一个进程使用；(2)请求与保持条件：进程已经保持了至少一个资源，又提出新的资源请求；(3)不可剥夺条件：已分配的资源不能被强制剥夺；(4)循环等待条件：存在进程资源的循环等待链。预防策略：(1)破坏互斥条件：尽量使用可共享资源；(2)破坏请求与保持：采用资源预分配策略；(3)破坏不可剥夺：允许剥夺资源；(4)破坏循环等待：资源有序分配法，对所有资源编号，按序申请。",
+          "analysis": "此题需要准确记忆四个必要条件的名称和含义，并能对应说出四种预防策略。评分要点：四个条件各占 15%（共 60%），四种策略各占 10%（共 40%）。",
+          "knowledge_points": ["死锁的必要条件", "死锁预防策略", "操作系统资源管理"],
+          "difficulty": "medium"
+        }
+      ],
+      "essay": [
+        {
+          "content": "请论述关系型数据库的三大范式（1NF、2NF、3NF），阐述每层范式的定义、要解决的问题，并结合一个学生选课系统的实际案例，说明如何将一个不符合范式的表逐步规范化为 3NF。",
+          "options": [],
+          "answer": "一、第一范式（1NF）：要求每个字段都是不可再分的原子值。解决的问题：消除重复组，确保每列只有一个值。例如学生表包含多个电话号码需拆分为独立记录。二、第二范式（2NF）：在 1NF 基础上，非主属性必须完全依赖于主键（消除部分函数依赖）。解决的问题：消除非主属性对主键的部分依赖。例如选课表（学号,课程号,学生姓名,课程名,成绩）中，学生姓名只依赖学号而非整个主键，需拆分。三、第三范式（3NF）：在 2NF 基础上，非主属性不能传递依赖于主键。解决的问题：消除传递依赖。例如学生表（学号,姓名,系编号,系名称）中，系名称通过系编号传递依赖于学号，需将系信息独立。四、案例分析：(1)初始表选课(学号,姓名,系名,课程号,课程名,教师,成绩)，不满足 1NF-3NF；(2)拆分为学生表(学号,姓名,系号)、系表(系号,系名)、课程表(课程号,课程名,教师)、选课表(学号,课程号,成绩)，全部满足 3NF。",
+          "analysis": "考察数据库范式理论的系统性理解和工程应用能力。评分要点：三个范式的准确定义和解决的问题各占 20%（共 60%），案例分析和逐步规范化过程占 40%。",
+          "knowledge_points": ["数据库范式理论", "1NF/2NF/3NF", "函数依赖", "数据库设计"],
+          "difficulty": "hard",
+          "is_cross_doc": true
+        }
+      ]
+    },
+    "english": {
+      "single_choice": [
+        {
+          "content": "The professor required that every student ______ a research paper by the end of the semester.",
+          "options": [
+            { "key": "A", "value": "submits" },
+            { "key": "B", "value": "submitted" },
+            { "key": "C", "value": "submit" },
+            { "key": "D", "value": "would submit" }
+          ],
+          "answer": "C",
+          "analysis": "在 require/suggest/insist 等表示\"要求、建议\"的动词后的 that 从句中，谓语动词用虚拟语气，形式为 (should) + 动词原形。本题 require 后接 that 从句，故用 submit（省略 should）。",
+          "knowledge_points": ["虚拟语气", "名词性从句中的虚拟语气", "require 的用法"],
+          "difficulty": "medium"
+        }
+      ],
+      "multi_choice": [
+        {
+          "content": "Which of the following sentences are grammatically correct? (  )",
+          "options": [
+            { "key": "A", "value": "Not only did he pass the exam, but he also got the highest score." },
+            { "key": "B", "value": "Hardly had she arrived when it began to rain." },
+            { "key": "C", "value": "Never I have seen such a beautiful sunset before." },
+            { "key": "D", "value": "Only after the meeting did I realize the importance of the decision." }
+          ],
+          "answer": "A,B,D",
+          "analysis": "A 正确：Not only 置于句首，主句用部分倒装。B 正确：Hardly...when 句型，Hardly 所在的主句用过去完成时倒装。C 错误：Never 置于句首需要部分倒装，应改为 Never have I seen。D 正确：Only + 状语置于句首，主句用部分倒装。",
+          "knowledge_points": ["倒装句", "部分倒装", "否定副词置于句首的倒装"],
+          "difficulty": "hard"
+        }
+      ],
+      "fill_blank": [
+        {
+          "content": "It is essential that every employee ______ (attend) the safety training session next Monday.",
+          "options": [],
+          "answer": "attend",
+          "analysis": "在 It is + essential/important/necessary + that 从句结构中，从句谓语用虚拟语气：(should) + 动词原形。",
+          "knowledge_points": ["虚拟语气", "It is + adj. + that 从句结构"],
+          "difficulty": "medium"
+        }
+      ],
+      "short_answer": [
+        {
+          "content": "Read the following paragraph and identify the author's main argument and the rhetorical devices used: 'Just as a journey of a thousand miles begins with a single step, so too does the path to environmental sustainability start with individual action. The metaphor is apt, for while global climate policy may seem distant and abstract, the choice to recycle, to conserve water, to reduce energy consumption — these are the tangible first steps that collectively forge a greener future.'",
+          "options": [],
+          "answer": "Main argument: Individual actions are the fundamental starting point for achieving environmental sustainability, and collective small actions lead to significant change. Rhetorical devices: (1) Analogy/Metaphor: comparing environmental action to 'a journey of a thousand miles'; (2) Parallelism: 'to recycle, to conserve water, to reduce energy consumption'; (3) Contrast: juxtaposing abstract 'global climate policy' with tangible 'individual action'; (4) Allusion: referencing the Chinese proverb 'a journey of a thousand miles begins with a single step'.",
+          "analysis": "评分要点：准确概括主要论点（40%），识别并解释至少两种修辞手法（各 30%）。需要结合文本具体词句进行说明。",
+          "knowledge_points": ["阅读理解", "修辞手法识别", "论点概括"],
+          "difficulty": "medium"
+        }
+      ],
+      "essay": [
+        {
+          "content": "Write an argumentative essay of approximately 300 words on the topic: 'Should universities adopt a pass/fail grading system instead of traditional letter grades?' Your essay should include a clear thesis statement, at least two supporting arguments with evidence, one counterargument with rebuttal, and a conclusion.",
+          "options": [],
+          "answer": "Sample response structure: INTRODUCTION — Hook + background on grading systems + thesis statement (e.g., 'While traditional letter grades provide detailed performance metrics, universities should consider adopting a hybrid model that preserves letter grades for major courses while implementing pass/fail for electives to reduce student anxiety and promote intellectual exploration.') BODY 1 — Argument for pass/fail: reduces competition stress, encourages risk-taking in course selection, promotes collaboration over competition (evidence: studies from Stanford, MIT pilot programs). BODY 2 — Argument for pass/fail: shifts focus from grade-chasing to genuine learning, fosters intrinsic motivation (evidence: educational psychology research on intrinsic vs extrinsic motivation). BODY 3 — Counterargument: letter grades are necessary for graduate school admissions and employer evaluation. Rebuttal: transcripts can include narrative evaluations; major courses can retain letter grades. CONCLUSION — restate thesis, synthesize arguments, forward-looking statement.",
+          "analysis": "评分要点：清晰的论点（20%）、论据充分性（30%）、反驳与回应（20%）、语言表达（20%）、结构完整性（10%）。",
+          "knowledge_points": ["议论文写作", "论点论据论证", "反驳与回应", "学术写作结构"],
+          "difficulty": "hard",
+          "is_cross_doc": true
+        }
+      ]
+    },
+    "medicine": {
+      "single_choice": [
+        {
+          "content": "急性心肌梗死患者最具诊断特异性的血清标志物是（  ）",
+          "options": [
+            { "key": "A", "value": "肌酸激酶（CK）" },
+            { "key": "B", "value": "乳酸脱氢酶（LDH）" },
+            { "key": "C", "value": "肌钙蛋白 I（cTnI）" },
+            { "key": "D", "value": "天冬氨酸氨基转移酶（AST）" }
+          ],
+          "answer": "C",
+          "analysis": "肌钙蛋白 I（cTnI）和肌钙蛋白 T（cTnT）是心肌细胞特有的结构蛋白，对心肌损伤具有极高的特异性和敏感性，是目前诊断急性心肌梗死的首选血清标志物。CK-MB 虽有价值但特异性不如肌钙蛋白，CK、LDH、AST 特异性较差。",
+          "knowledge_points": ["急性心肌梗死的血清学诊断", "心肌标志物", "肌钙蛋白"],
+          "difficulty": "medium"
+        }
+      ],
+      "multi_choice": [
+        {
+          "content": "以下关于糖尿病的描述中，正确的有（  ）",
+          "options": [
+            { "key": "A", "value": "1 型糖尿病是由于胰岛 β 细胞被自身免疫破坏所致" },
+            { "key": "B", "value": "2 型糖尿病的主要病理机制是胰岛素抵抗和胰岛素分泌相对不足" },
+            { "key": "C", "value": "空腹血糖 ≥ 7.0 mmol/L 可诊断为糖尿病" },
+            { "key": "D", "value": "二甲双胍是 2 型糖尿病的一线口服降糖药" }
+          ],
+          "answer": "A,B,C,D",
+          "analysis": "四项均为正确描述：1 型糖尿病为自身免疫性 β 细胞破坏；2 型以胰岛素抵抗为主伴相对分泌不足；WHO 糖尿病诊断标准包括空腹血糖 ≥ 7.0 mmol/L；二甲双胍是 2 型糖尿病首选一线药物，除非有禁忌证。",
+          "knowledge_points": ["糖尿病的分类", "糖尿病的诊断标准", "糖尿病的病理机制", "口服降糖药物"],
+          "difficulty": "medium"
+        }
+      ],
+      "fill_blank": [
+        {
+          "content": "人体正常收缩压范围为 ______ mmHg，舒张压范围为 ______ mmHg。",
+          "options": [],
+          "answer": "90-139, 60-89",
+          "analysis": "根据中国高血压防治指南，正常血压定义为收缩压 < 120 mmHg 且舒张压 < 80 mmHg。正常高值为收缩压 120-139 和/或舒张压 80-89。高血压为收缩压 ≥ 140 和/或舒张压 ≥ 90。",
+          "knowledge_points": ["正常血压范围", "血压分级标准"],
+          "difficulty": "easy"
+        }
+      ],
+      "short_answer": [
+        {
+          "content": "简述社区获得性肺炎（CAP）的诊断标准和初始经验性抗生素治疗原则。",
+          "options": [],
+          "answer": "CAP 诊断标准：(1)新出现的咳嗽、咳痰或原有呼吸道症状加重；(2)发热（体温 > 38°C）；(3)肺实变体征和/或湿啰音；(4)白细胞计数 > 10×10⁹/L 或 < 4×10⁹/L；(5)胸部影像学显示片状、斑片状浸润影或间质性改变。上述1-4中任何一项加第5项排除其他疾病即可诊断。初始经验性抗生素治疗原则：(1)根据患者年龄、基础疾病、病情严重程度分层治疗；(2)青壮年无基础疾病：青霉素类或大环内酯类；(3)老年人或有基础疾病：氟喹诺酮类或 β-内酰胺类 + 大环内酯类联合；(4)重症 CAP：需覆盖非典型病原体，建议联合用药并住院治疗。",
+          "analysis": "评分要点：诊断标准每条占 10%（共 50%），治疗原则及分层用药选择占 50%。需体现分层治疗思维。",
+          "knowledge_points": ["社区获得性肺炎", "CAP 诊断标准", "抗生素经验性治疗", "呼吸系统感染"],
+          "difficulty": "medium"
+        }
+      ],
+      "essay": [
+        {
+          "content": "试述高血压的药物治疗策略，分别阐述五大类一线降压药物的作用机制、代表药物、适应症与禁忌症，并结合最新的中国高血压防治指南，论述个体化治疗方案的制定原则。",
+          "options": [],
+          "answer": "一、五大类一线降压药物：(1)ACEI（血管紧张素转换酶抑制剂）：抑制 ACE 减少 AngII 生成，代表药卡托普利、依那普利，适用于合并心衰、糖尿病肾病者，禁忌为双侧肾动脉狭窄、妊娠；(2)ARB（血管紧张素II受体拮抗剂）：阻断 AT1 受体，代表药缬沙坦、氯沙坦，适应症同 ACEI，咳嗽副作用少；(3)CCB（钙通道阻滞剂）：抑制钙离子内流扩张血管，代表药硝苯地平、氨氯地平，适用于老年单纯收缩期高血压，禁忌为心衰伴收缩功能不全（非二氢吡啶类）；(4)利尿剂：噻嗪类抑制远曲小管 Na⁺-Cl⁻ 共转运体，代表药氢氯噻嗪，适用于老年、盐敏感性高血压，禁忌为痛风；(5)β 受体阻滞剂：抑制交感神经活性，代表药美托洛尔，适用于合并冠心病、心衰者，禁忌为哮喘、严重心动过缓。二、个体化治疗原则：(1)根据合并症选药（如糖尿病首选 ACEI/ARB）；(2)根据年龄和种族（老年/黑人首选 CCB 或利尿剂）；(3)逐步联合用药（二联→三联→四联）；(4)单片复方制剂提高依从性；(5)目标血压个体化（一般<140/90，糖尿病/肾病患者<130/80）。",
+          "analysis": "评分要点：五类药物机制/代表药/适应症/禁忌症完整度占 60%，个体化治疗原则阐述占 40%。需体现指南导向的临床思维。",
+          "knowledge_points": ["高血压药物治疗", "ACEI/ARB/CCB/利尿剂/β阻滞剂", "个体化治疗", "中国高血压防治指南"],
+          "difficulty": "hard",
+          "is_cross_doc": true
+        }
+      ]
+    },
+    "law": {
+      "single_choice": [
+        {
+          "content": "根据《中华人民共和国民法典》，向人民法院请求保护民事权利的诉讼时效期间为（  ）",
+          "options": [
+            { "key": "A", "value": "一年" },
+            { "key": "B", "value": "两年" },
+            { "key": "C", "value": "三年" },
+            { "key": "D", "value": "五年" }
+          ],
+          "answer": "C",
+          "analysis": "《民法典》第188条规定：向人民法院请求保护民事权利的诉讼时效期间为三年。法律另有规定的，依照其规定。此前《民法通则》规定为两年，《民法典》将其延长为三年，自 2021 年 1 月 1 日起施行。",
+          "knowledge_points": ["诉讼时效", "民法典总则编", "民事权利保护"],
+          "difficulty": "easy"
+        }
+      ],
+      "multi_choice": [
+        {
+          "content": "根据《民法典》，以下属于侵犯隐私权的行为有（  ）",
+          "options": [
+            { "key": "A", "value": "以电话、短信等方式侵扰他人私人生活安宁" },
+            { "key": "B", "value": "拍摄、窥视他人身体的私密部位" },
+            { "key": "C", "value": "未经许可进入他人住宅" },
+            { "key": "D", "value": "处理他人的私密信息" }
+          ],
+          "answer": "A,B,D",
+          "analysis": "《民法典》第1033条列举了侵犯隐私权的具体行为，包括侵扰私人生活安宁、拍摄私密部位、处理私密信息等。C 项侵犯的是住宅权或财产权，属于物权保护范畴，不属于民法典规定的隐私权侵权行为。",
+          "knowledge_points": ["隐私权的保护", "民法典人格权编", "侵权行为的认定"],
+          "difficulty": "medium"
+        }
+      ],
+      "fill_blank": [
+        {
+          "content": "根据《民法典》，无民事行为能力人实施的民事法律行为 ______。",
+          "options": [],
+          "answer": "无效",
+          "analysis": "《民法典》第144条规定：无民事行为能力人实施的民事法律行为无效。无民事行为能力人包括不满八周岁的未成年人和不能辨认自己行为的成年人。",
+          "knowledge_points": ["民事行为能力", "民事法律行为的效力", "无民事行为能力人"],
+          "difficulty": "easy"
+        }
+      ],
+      "short_answer": [
+        {
+          "content": "简述正当防卫的构成要件，并说明防卫过当的法律后果。",
+          "options": [],
+          "answer": "正当防卫的构成要件：(1)起因条件：存在不法侵害；(2)时间条件：不法侵害正在进行；(3)对象条件：防卫行为必须针对不法侵害者本人；(4)主观条件：防卫人具有防卫意图；(5)限度条件：防卫行为不得超过必要限度造成重大损害。防卫过当的法律后果：《刑法》第20条第2款规定，正当防卫明显超过必要限度造成重大损害的，应当负刑事责任，但是应当减轻或者免除处罚。特殊防卫权：对正在进行行凶、杀人、抢劫、强奸、绑架以及其他严重危及人身安全的暴力犯罪，采取防卫行为造成不法侵害人伤亡的，不属于防卫过当，不负刑事责任。",
+          "analysis": "评分要点：五个构成要件各占 10%（共 50%），防卫过当法律后果占 25%，特殊防卫权占 25%。",
+          "knowledge_points": ["正当防卫的构成要件", "防卫过当", "特殊防卫权", "刑法总则"],
+          "difficulty": "medium"
+        }
+      ],
+      "essay": [
+        {
+          "content": "论我国刑法中罪刑法定原则的内涵、历史渊源及司法适用。请结合具体罪名和司法解释，论述罪刑法定原则在司法实践中如何保障人权、限制国家刑罚权的滥用，并分析当前司法实践中存在的挑战。",
+          "options": [],
+          "answer": "一、罪刑法定原则的内涵（《刑法》第3条）：法无明文规定不为罪，法无明文规定不处罚。四个派生原则：(1)排斥习惯法——定罪量刑必须依据成文法；(2)禁止类推解释——严格解释刑法条文；(3)禁止溯及既往——从旧兼从轻原则；(4)禁止绝对不定期刑——刑罚必须明确。二、历史渊源：起源于 1215 年英国《大宪章》，后经贝卡里亚《论犯罪与刑罚》、费尔巴哈等启蒙思想家系统阐述，成为现代刑法基石。三、司法适用的体现：(1)入罪法定——某行为未被刑法明文禁止则不构成犯罪（如\"换偶\"是否构成聚众淫乱罪的争议）；(2)出罪法定——符合法定出罪事由的必须出罪；(3)刑种刑度法定——法官不得创制刑罚种类和幅度。四、人权保障功能：通过事先公布的明确刑法规范，使公民可预见自己行为的法律后果，防止司法擅断。五、当前挑战：(1)网络新型犯罪与传统罪名适用边界模糊；(2)司法解释的扩张解释与类推解释的界限；(3)空白罪状中行政法规变动对罪刑法定的冲击。",
+          "analysis": "评分要点：内涵与派生原则准确度占 30%，历史渊源占 10%，司法适用分析占 30%，人权保障论述占 15%，现实挑战分析占 15%。需展现理论深度和司法实践意识。",
+          "knowledge_points": ["罪刑法定原则", "刑法基本原则", "刑法解释方法", "人权保障"],
+          "difficulty": "hard",
+          "is_cross_doc": true
+        }
+      ]
+    },
+    "general": {
+      "single_choice": [
+        {
+          "content": "根据马斯洛需求层次理论，人类最基本的需求是（  ）",
+          "options": [
+            { "key": "A", "value": "安全需求" },
+            { "key": "B", "value": "生理需求" },
+            { "key": "C", "value": "社交需求" },
+            { "key": "D", "value": "尊重需求" }
+          ],
+          "answer": "B",
+          "analysis": "马斯洛需求层次理论将人类需求从低到高分为五层：生理需求（食物、水、睡眠等）→ 安全需求 → 社交需求 → 尊重需求 → 自我实现需求。生理需求是最基本、最底层的需求。",
+          "knowledge_points": ["马斯洛需求层次理论", "管理学基础"],
+          "difficulty": "easy"
+        },
+        {
+          "content": "在 SWOT 分析中，\"S\"代表的是（  ）",
+          "options": [
+            { "key": "A", "value": "System（系统）" },
+            { "key": "B", "value": "Strategy（策略）" },
+            { "key": "C", "value": "Strength（优势）" },
+            { "key": "D", "value": "Structure（结构）" }
+          ],
+          "answer": "C",
+          "analysis": "SWOT 分析是战略管理中常用的分析工具：S=Strengths（内部优势）、W=Weaknesses（内部劣势）、O=Opportunities（外部机会）、T=Threats（外部威胁）。",
+          "knowledge_points": ["SWOT 分析", "战略管理工具"],
+          "difficulty": "easy"
+        }
+      ],
+      "multi_choice": [
+        {
+          "content": "以下属于有效沟通技巧的有（  ）",
+          "options": [
+            { "key": "A", "value": "积极倾听并给予反馈" },
+            { "key": "B", "value": "使用\"我\"陈述句表达感受而非指责对方" },
+            { "key": "C", "value": "在对方说话时预先构思自己的回应" },
+            { "key": "D", "value": "注意非语言信号如肢体语言和语调" }
+          ],
+          "answer": "A,B,D",
+          "analysis": "A 正确：积极倾听是有效沟通的基础。B 正确：\"我\"陈述（I-message）降低防御心理。C 错误：边听边构思回应是伪倾听，违反积极倾听原则。D 正确：非语言沟通占信息传递的 55% 以上（Mehrabian 法则）。",
+          "knowledge_points": ["沟通技巧", "积极倾听", "非语言沟通"],
+          "difficulty": "easy"
+        }
+      ],
+      "fill_blank": [
+        {
+          "content": "科学方法的基本步骤依次为：观察现象 → 提出 ______ → 设计实验 → 收集数据 → 分析数据 → 得出结论。",
+          "options": [],
+          "answer": "假设",
+          "analysis": "科学方法遵循观察-假设-实验-分析-结论的流程。假设是对现象提出的可检验的解释性猜想，是科学研究的核心环节。",
+          "knowledge_points": ["科学方法", "研究方法论"],
+          "difficulty": "easy"
+        }
+      ],
+      "short_answer": [
+        {
+          "content": "请简述 PDCA 循环（戴明环）的四个阶段及其在质量管理中的应用意义。",
+          "options": [],
+          "answer": "PDCA 循环四阶段：(1)Plan（计划）：分析现状、找出问题、确定目标、制定改进计划；(2)Do（执行）：按照计划进行小范围试点实施；(3)Check（检查）：对照计划检查执行效果，找出偏差；(4)Act（处理）：总结经验、标准化成功做法，未解决问题进入下一循环。应用意义：PDCA 是持续改进的基础方法论，强调阶梯式上升和循环推进，使质量管理从被动检验转为主动预防和持续优化。广泛应用于 ISO 9001 质量管理体系和六西格玛管理中。",
+          "analysis": "评分要点：四个阶段的准确定义各占 15%（共 60%），应用意义的阐述占 40%。需体现\"持续改进\"的核心理念。",
+          "knowledge_points": ["PDCA 循环", "质量管理", "戴明环", "持续改进"],
+          "difficulty": "medium"
+        }
+      ],
+      "essay": [
+        {
+          "content": "试论终身学习（Lifelong Learning）在现代社会中的必要性与实现路径。请从技术变革、职业发展、个人成长三个维度进行分析，并提出个人、组织和政府三个层面推动终身学习的具体措施。",
+          "options": [],
+          "answer": "一、终身学习的必要性：(1)技术变革维度：AI、大数据等颠覆性技术加速更新，知识半衰期缩短至 2-3 年，单一技能已无法支撑完整职业生涯；(2)职业发展维度：零工经济、远程办公兴起，职业转型频率增加，平均每人一生转换 5-7 次职业；(3)个人成长维度：老龄化社会延长工作年限，学习成为保持认知活力、实现自我价值的重要途径。二、实现路径：(1)个人层面：建立成长型思维、利用 MOOC/微学位等在线教育资源、制定个人学习计划、参与社群学习；(2)组织层面：建立企业大学或内部培训体系、实施轮岗制度、打造学习型组织文化（如 Google 20% 时间制）、将学习成果纳入绩效考核；(3)政府层面：建设国家资历框架、发放终身学习券或学分银行制度、推动教育信息化基础设施建设、立法保障带薪学习假。三、总结：终身学习从\"可选项\"变为\"必选项\"，需要多元主体协同构建学习型社会生态系统。",
+          "analysis": "评分要点：三维度必要性分析各占 15%（共 45%），三层级实现路径各占 15%（共 45%），整体逻辑和总结占 10%。需体现系统性思维。",
+          "knowledge_points": ["终身学习", "学习型社会", "职业发展", "教育政策"],
+          "difficulty": "hard",
+          "is_cross_doc": true
+        }
+      ]
+    }
+  }
+}
