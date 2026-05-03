@@ -6,6 +6,80 @@ const { checkQuota, deductQuota } = require('./quotaService');
 
 const prisma = new PrismaClient();
 
+async function savePaperToDatabase({
+  userId,
+  fileId,
+  courseName,
+  paper,
+  parsedText,
+  config,
+  clientType,
+  operationType,
+  originalPaperId,
+  durationMs
+}) {
+  const paperRecord = await prisma.generatedPaper.create({
+    data: {
+      userId,
+      fileId,
+      courseName,
+      paperTitle: paper.paper_title || null,
+      paperJson: paper,
+      parsedTextSnapshot: parsedText,
+      config,
+      qualityReport: paper.quality_report || null,
+      knowledgeSummary: paper.knowledge_summary || null,
+      promptVersion: paper.quality_report?.prompt_version || 'generate-v1',
+      modelName: 'deepseek-chat',
+      tokenUsage: paper.usage?.total_tokens || null,
+      status: 'completed',
+      clientType,
+      originalPaperId: originalPaperId || null
+    }
+  });
+
+  if (paper.questions && Array.isArray(paper.questions)) {
+    const questionData = paper.questions.map((q) => ({
+      paperId: paperRecord.id,
+      questionNo: q.question_no,
+      questionType: q.question_type,
+      content: q.content,
+      options: q.options || null,
+      answer: q.answer,
+      analysis: q.analysis || null,
+      knowledgePoints: q.knowledge_points || null,
+      difficulty: q.difficulty || null,
+      score: q.score || null
+    }));
+
+    await prisma.paperQuestion.createMany({ data: questionData });
+  }
+
+  await prisma.generationLog.create({
+    data: {
+      paperId: paperRecord.id,
+      status: 'completed',
+      durationMs,
+      tokenUsage: paper.usage?.total_tokens || null
+    }
+  });
+
+  const questionCount = paper.questions ? paper.questions.length : 0;
+  const qualityScore = paper.quality_report?.score ?? null;
+
+  await deductQuota(userId, operationType, 'paper', paperRecord.id, clientType);
+
+  return {
+    paperId: paperRecord.id,
+    paperTitle: paperRecord.paperTitle,
+    courseName: paperRecord.courseName,
+    questionCount,
+    qualityScore,
+    originalPaperId: originalPaperId || null,
+    paper
+  };
+}
+
 async function generateAndSave(userId, fileId, courseName, configInput, clientType) {
   const file = await prisma.uploadedFile.findUnique({ where: { id: fileId } });
 
@@ -52,64 +126,17 @@ async function generateAndSave(userId, fileId, courseName, configInput, clientTy
 
   const durationMs = Date.now() - startTime;
 
-  const paperRecord = await prisma.generatedPaper.create({
-    data: {
-      userId,
-      fileId,
-      courseName: courseName.trim(),
-      paperTitle: paper.paper_title || null,
-      paperJson: paper,
-      parsedTextSnapshot: parsedText,
-      config: configInput || null,
-      qualityReport: paper.quality_report || null,
-      knowledgeSummary: paper.knowledge_summary || null,
-      promptVersion: paper.quality_report?.prompt_version || 'generate-v1',
-      modelName: 'deepseek-chat',
-      tokenUsage: paper.usage?.total_tokens || null,
-      status: 'completed',
-      clientType: clientType || 'web'
-    }
+  return await savePaperToDatabase({
+    userId,
+    fileId,
+    courseName: courseName.trim(),
+    paper,
+    parsedText,
+    config: configInput || null,
+    clientType: clientType || 'web',
+    operationType: 'generate',
+    durationMs
   });
-
-  if (paper.questions && Array.isArray(paper.questions)) {
-    const questionData = paper.questions.map((q) => ({
-      paperId: paperRecord.id,
-      questionNo: q.question_no,
-      questionType: q.question_type,
-      content: q.content,
-      options: q.options || null,
-      answer: q.answer,
-      analysis: q.analysis || null,
-      knowledgePoints: q.knowledge_points || null,
-      difficulty: q.difficulty || null,
-      score: q.score || null
-    }));
-
-    await prisma.paperQuestion.createMany({ data: questionData });
-  }
-
-  await prisma.generationLog.create({
-    data: {
-      paperId: paperRecord.id,
-      status: 'completed',
-      durationMs,
-      tokenUsage: paper.usage?.total_tokens || null
-    }
-  });
-
-  const questionCount = paper.questions ? paper.questions.length : 0;
-  const qualityScore = paper.quality_report?.score ?? null;
-
-  await deductQuota(userId, 'generate', 'paper', paperRecord.id, clientType || 'web');
-
-  return {
-    paperId: paperRecord.id,
-    paperTitle: paperRecord.paperTitle,
-    courseName: paperRecord.courseName,
-    questionCount,
-    qualityScore,
-    paper
-  };
 }
 
 async function getUserPapers(userId, options = {}) {
@@ -261,66 +288,18 @@ async function regeneratePaper(paperId, userId, configOverride) {
 
   const normalConfig = config && typeof config === 'object' && !Array.isArray(config) ? config : null;
 
-  const paperRecord = await prisma.generatedPaper.create({
-    data: {
-      userId,
-      fileId: original.fileId,
-      courseName: original.courseName,
-      paperTitle: paper.paper_title || null,
-      paperJson: paper,
-      parsedTextSnapshot: original.parsedTextSnapshot,
-      config: normalConfig,
-      qualityReport: paper.quality_report || null,
-      knowledgeSummary: paper.knowledge_summary || null,
-      promptVersion: paper.quality_report?.prompt_version || 'generate-v1',
-      modelName: 'deepseek-chat',
-      tokenUsage: paper.usage?.total_tokens || null,
-      status: 'completed',
-      clientType: original.clientType,
-      originalPaperId: paperId
-    }
-  });
-
-  if (paper.questions && Array.isArray(paper.questions)) {
-    const questionData = paper.questions.map((q) => ({
-      paperId: paperRecord.id,
-      questionNo: q.question_no,
-      questionType: q.question_type,
-      content: q.content,
-      options: q.options || null,
-      answer: q.answer,
-      analysis: q.analysis || null,
-      knowledgePoints: q.knowledge_points || null,
-      difficulty: q.difficulty || null,
-      score: q.score || null
-    }));
-
-    await prisma.paperQuestion.createMany({ data: questionData });
-  }
-
-  await prisma.generationLog.create({
-    data: {
-      paperId: paperRecord.id,
-      status: 'completed',
-      durationMs,
-      tokenUsage: paper.usage?.total_tokens || null
-    }
-  });
-
-  const questionCount = paper.questions ? paper.questions.length : 0;
-  const qualityScore = paper.quality_report?.score ?? null;
-
-  await deductQuota(userId, 'regenerate', 'paper', paperRecord.id, original.clientType);
-
-  return {
-    paperId: paperRecord.id,
-    paperTitle: paperRecord.paperTitle,
-    courseName: paperRecord.courseName,
-    questionCount,
-    qualityScore,
+  return await savePaperToDatabase({
+    userId,
+    fileId: original.fileId,
+    courseName: original.courseName,
+    paper,
+    parsedText: original.parsedTextSnapshot,
+    config: normalConfig,
+    clientType: original.clientType,
+    operationType: 'regenerate',
     originalPaperId: paperId,
-    paper
-  };
+    durationMs
+  });
 }
 
 module.exports = { generateAndSave, getUserPapers, getPaperById, regeneratePaper };
