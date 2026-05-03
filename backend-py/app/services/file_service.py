@@ -181,7 +181,18 @@ async def process_file_extraction(file_id: str):
             return
 
     await _classify_file(file_id)
+
+    async with async_session() as session:
+        file = await session.get(UploadedFile, file_id)
+        if not file or file.status == FileStatus.failed:
+            return
+
     await _chunk_file(file_id)
+
+    async with async_session() as session:
+        file = await session.get(UploadedFile, file_id)
+        if not file or file.status == FileStatus.failed:
+            return
 
     async with async_session() as session:
         file = await session.get(UploadedFile, file_id)

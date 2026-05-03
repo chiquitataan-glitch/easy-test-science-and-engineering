@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -346,7 +347,7 @@ async def generate_paper(
 ) -> dict:
     start_time = time.time()
 
-    await _validate_docs(doc_ids, user.id)
+    doc_ids = await _validate_and_wait_docs(doc_ids, user.id)
 
     normalized_config = _normalize_config(config)
     question_count = sum(v["count"] for v in normalized_config["types"].values())
@@ -468,27 +469,76 @@ async def generate_paper(
     return result
 
 
-async def _validate_docs(doc_ids: list[str], user_id: str):
+async def _validate_and_wait_docs(doc_ids: list[str], user_id: str) -> list[str]:
     count = len(doc_ids)
     if count < 5 or count > 15:
         raise ValueError(f"doc_ids count must be 5-15, got {count}")
+
+    POLL_INTERVAL = 2
+    MAX_WAIT = 60
 
     async with async_session() as session:
         result = await session.execute(
             select(UploadedFile).where(UploadedFile.id.in_(doc_ids))
         )
-        files = result.scalars().all()
+        files = {f.id: f for f in result.scalars().all()}
 
-    found_ids = {f.id for f in files}
-    missing = set(doc_ids) - found_ids
+    missing = set(doc_ids) - set(files.keys())
     if missing:
         raise ValueError(f"documents not found: {missing}")
 
-    for f in files:
-        if f.status != FileStatus.ready:
-            raise ValueError(f"document {f.id} status is {f.status}, expected ready")
+    for f in files.values():
         if f.userId != user_id:
             raise ValueError(f"document {f.id} does not belong to user {user_id}")
+
+    waiting_ids = [
+        fid for fid, f in files.items()
+        if f.status not in (FileStatus.ready, FileStatus.failed)
+    ]
+    dead_ids = [fid for fid, f in files.items() if f.status == FileStatus.failed]
+
+    if waiting_ids:
+        logger.info("waiting for %d files to process: %s", len(waiting_ids), waiting_ids)
+        elapsed = 0
+        while elapsed < MAX_WAIT:
+            await asyncio.sleep(POLL_INTERVAL)
+            elapsed += POLL_INTERVAL
+
+            async with async_session() as session:
+                result = await session.execute(
+                    select(UploadedFile).where(UploadedFile.id.in_(waiting_ids))
+                )
+                refreshed = {f.id: f for f in result.scalars().all()}
+
+            still_waiting = []
+            for fid in waiting_ids:
+                f = refreshed.get(fid)
+                if not f:
+                    continue
+                if f.status == FileStatus.ready:
+                    logger.info("file %s is now ready", fid)
+                elif f.status == FileStatus.failed:
+                    logger.warning("file %s failed during processing", fid)
+                    dead_ids.append(fid)
+                else:
+                    still_waiting.append(fid)
+
+            waiting_ids = still_waiting
+            if not waiting_ids:
+                break
+
+        if waiting_ids:
+            logger.warning("timed out waiting for files: %s", waiting_ids)
+
+    valid_ids = [fid for fid in doc_ids if fid not in dead_ids]
+    if len(valid_ids) < 1:
+        raise ValueError("all uploaded files failed to process")
+    if len(valid_ids) < 5:
+        logger.warning("only %d valid files out of %d, proceeding anyway", len(valid_ids), len(doc_ids))
+        if len(valid_ids) < 1:
+            raise ValueError("no valid files available for generation")
+
+    return valid_ids
 
 
 async def _check_quota(user: User):
