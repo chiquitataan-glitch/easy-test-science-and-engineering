@@ -9,10 +9,13 @@
       </div>
 
       <div class="form-group">
-        <label for="fileInput">上传资料（支持 PDF / DOCX / PPT / PPTX）</label>
-        <input id="fileInput" type="file" accept=".pdf,.docx,.ppt,.pptx" @change="handleFileChange" :disabled="loading" />
-        <span v-if="selectedFile" class="file-name">{{ selectedFile.name }}</span>
-        <p class="file-hint">最大 20MB，PPT 格式需要 LibreOffice 环境</p>
+        <label for="fileInput">上传资料（支持 PDF / DOCX / PPT / PPTX，可选 5-15 个文件）</label>
+        <input id="fileInput" type="file" accept=".pdf,.docx,.ppt,.pptx" multiple @change="handleFileChange" :disabled="loading" />
+        <div v-if="selectedFiles.length" class="file-list">
+          <span v-for="(f, i) in selectedFiles" :key="i" class="file-name">{{ f.name }}</span>
+          <span class="file-count">共 {{ selectedFiles.length }} 个文件</span>
+        </div>
+        <p class="file-hint">单个文件最大 20MB，至少选择 5 个文件</p>
       </div>
 
       <div class="config-toggle" @click="showConfig = !showConfig">
@@ -78,7 +81,7 @@ const configDifficulties = [
 ]
 
 const courseName = ref('')
-const selectedFile = ref(null)
+const selectedFiles = ref([])
 const loading = ref(false)
 const error = ref('')
 const showConfig = ref(false)
@@ -99,11 +102,11 @@ const updateTypeCount = (key, val) => { config.types[key].count = val }
 const updateTypeScore = (key, val) => { config.types[key].score = val }
 const updateDifficulty = (key, val) => { config.difficulty[key] = val }
 
-const canGenerate = computed(() => courseName.value.trim() && selectedFile.value && !loading.value)
+const canGenerate = computed(() => courseName.value.trim() && selectedFiles.value.length >= 5 && !loading.value)
 const configTotal = computed(() => Object.values(config.types).reduce((s, t) => s + t.count, 0))
 
 const handleFileChange = (e) => {
-  selectedFile.value = e.target.files[0]
+  selectedFiles.value = Array.from(e.target.files || [])
   error.value = ''
 }
 
@@ -114,15 +117,18 @@ async function handleGenerate() {
   error.value = ''
 
   try {
-    const formData = new FormData()
-    formData.append('file', selectedFile.value)
+    const fileIds = []
+    for (const file of selectedFiles.value) {
+      const formData = new FormData()
+      formData.append('file', file)
 
-    const uploadData = await apiClient('/api/files/upload', {
-      method: 'POST',
-      body: formData
-    })
+      const uploadData = await apiClient('/api/files/upload', {
+        method: 'POST',
+        body: formData
+      })
 
-    const fileId = uploadData.data.id
+      fileIds.push(uploadData.data.id)
+    }
 
     const apiConfig = showConfig.value ? {
       types: {
@@ -139,7 +145,7 @@ async function handleGenerate() {
     const generateData = await apiClient('/api/papers/generate', {
       method: 'POST',
       body: JSON.stringify({
-        fileId,
+        documentIds: fileIds,
         courseName: courseName.value.trim(),
         config: apiConfig
       })
