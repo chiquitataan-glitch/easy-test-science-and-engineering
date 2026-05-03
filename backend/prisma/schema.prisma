@@ -23,6 +23,10 @@ enum FileStatus {
   pending
   parsed
   failed
+  classifying
+  chunking
+  embedding
+  ready
 }
 
 enum PaperStatus {
@@ -30,30 +34,28 @@ enum PaperStatus {
   generating
   completed
   failed
-}
-
-enum UsageAction {
-  upload
-  parse
-  generate
-  regenerate
-  quota_grant
-  quota_refund
+  timeout
 }
 
 model User {
-  id            String           @id @default(uuid())
-  displayName   String?
-  avatarUrl     String?
-  quotaBalance  Int              @default(10)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id                  String     @id @default(uuid())
+  displayName         String?
+  avatarUrl           String?
+  role                String     @default("user")
+  membershipType      String     @default("free")
+  membershipExpire    DateTime?
+  inviteCodeUsed      String?
+  remainingGenerations Int       @default(20)
+  quotaResetAt        DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 
-  identities     UserIdentity[]
-  uploadedFiles  UploadedFile[]
-  generatedPapers GeneratedPaper[]
-  quotas         UserQuota[]
-  usageRecords   UsageRecord[]
+  identities        UserIdentity[]
+  uploadedFiles     UploadedFile[]
+  generatedPapers   GeneratedPaper[]
+  generationLogs    GenerationLog[]
+  createdInviteCodes InviteCode[]  @relation("InviteCodeCreator")
+  usedInviteCodes   InviteCode[]  @relation("InviteCodeUser")
 }
 
 model UserIdentity {
@@ -76,24 +78,29 @@ model UserIdentity {
 }
 
 model UploadedFile {
-  id              String     @id @default(uuid())
-  userId          String
-  originalName    String
-  mimeType        String
-  size            Int
-  path            String
-  hash            String?
-  storageProvider String     @default("local")
-  storageKey      String?
-  parsedText      String?
-  parsedAt        DateTime?
-  status          FileStatus @default(pending)
-  clientType      ClientType @default(web)
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  id                 String     @id @default(uuid())
+  userId             String
+  originalName       String
+  mimeType           String
+  size               Int
+  path               String
+  hash               String?    @unique
+  storageProvider    String     @default("local")
+  storageKey         String?
+  parsedText         String?
+  parsedAt           DateTime?
+  status             FileStatus @default(pending)
+  clientType         ClientType @default(web)
+  category           String?
+  categoryConfidence Float?
+  chunkCount         Int        @default(0)
+  totalChars         Int        @default(0)
+  errorMessage       String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  generatedPapers  GeneratedPaper[]
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chunks DocumentChunk[]
 
   @@index([userId])
 }
@@ -101,12 +108,15 @@ model UploadedFile {
 model GeneratedPaper {
   id                  String      @id @default(uuid())
   userId              String
-  fileId              String?
+  documentIds         Json
   courseName          String
   paperTitle          String?
   paperJson           Json
   rawResponse         String?
-  parsedTextSnapshot  String?
+  category            String?
+  sourceChunks        Json?
+  durationSeconds     Float?
+  failReason          String?
   config              Json?
   qualityReport       Json?
   knowledgeSummary    Json?
@@ -120,14 +130,12 @@ model GeneratedPaper {
   updatedAt           DateTime    @updatedAt
 
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  uploadedFile   UploadedFile?   @relation(fields: [fileId], references: [id], onDelete: SetNull)
   paperQuestions PaperQuestion[]
   generationLogs GenerationLog[]
   originalPaper  GeneratedPaper? @relation("PaperRegeneration", fields: [originalPaperId], references: [id])
   regenerations  GeneratedPaper[] @relation("PaperRegeneration")
 
   @@index([userId])
-  @@index([fileId])
 }
 
 model PaperQuestion {
@@ -142,72 +150,90 @@ model PaperQuestion {
   knowledgePoints Json?
   difficulty      String?
   score           Float?
+  sourceChunkIds  Json?
+  isCrossDoc      Boolean  @default(false)
 
   paper GeneratedPaper @relation(fields: [paperId], references: [id], onDelete: Cascade)
 
   @@index([paperId])
 }
 
-model UserQuota {
-  id          String   @id @default(uuid())
-  userId      String
-  quotaTotal  Int
-  quotaUsed   Int      @default(0)
-  periodStart DateTime @default(now())
-  periodEnd   DateTime?
+model DocumentChunk {
+  id           String   @id @default(uuid())
+  fileId       String
+  chunkIndex   Int
+  content      String   @db.Text
+  charCount    Int
+  tokenEstimate Int
+  pageNumber   Int?
+  sectionTitle String?
+  chromaId     String?  @unique
+  createdAt    DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  file UploadedFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
-  @@unique([userId])
-}
-
-model UsageRecord {
-  id           String      @id @default(uuid())
-  userId       String
-  action       UsageAction
-  delta        Int
-  balanceAfter Int
-  clientType   ClientType  @default(web)
-  resourceType String?
-  resourceId   String?
-  createdAt    DateTime    @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
+  @@index([fileId])
 }
 
 model GenerationLog {
   id            String   @id @default(uuid())
-  paperId       String
+  userId        String
+  paperId       String?
+  docIds        Json
+  questionCount Int?
+  tokenUsed     Int?
+  durationMs    Int?
+  retrievalK    Int?
+  mode          String   @default("deep")
   status        String
   errorMessage  String?
-  durationMs    Int?
-  tokenUsage    Int?
   createdAt     DateTime @default(now())
 
-  paper GeneratedPaper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paper GeneratedPaper? @relation(fields: [paperId], references: [id], onDelete: SetNull)
 
+  @@index([userId])
   @@index([paperId])
 }
 
-model PromptVersion {
-  id        String   @id @default(uuid())
-  name      String
-  version   String
-  content   String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-
-  @@unique([name, version])
+model BillingLog {
+  id            String   @id @default(uuid())
+  userId        String
+  type          String
+  amount        Int
+  paymentMethod String?
+  transactionId String?  @unique
+  status        String   @default("pending")
+  metadata      Json?
+  createdAt     DateTime @default(now())
 }
 
-model Plan {
-  id           String   @id @default(uuid())
-  name         String
-  quotaAmount  Int
-  price        Float?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+model InviteCode {
+  id             String    @id @default(uuid())
+  code           String    @unique
+  status         String    @default("unused")
+  membershipType String
+  createdBy      String
+  createdAt      DateTime  @default(now())
+  expireAt       DateTime
+  usedBy         String?
+  usedAt         DateTime?
+
+  creator User  @relation("InviteCodeCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  user    User? @relation("InviteCodeUser", fields: [usedBy], references: [id], onDelete: SetNull)
+
+  @@index([createdBy])
+  @@index([usedBy])
+}
+
+model MembershipHistory {
+  id             String    @id @default(uuid())
+  userId         String
+  changeType     String
+  membershipType String
+  startDate      DateTime
+  endDate        DateTime?
+  triggeredBy    String
+  inviteCodeId   String?
+  createdAt      DateTime  @default(now())
 }
