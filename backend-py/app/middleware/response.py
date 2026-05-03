@@ -43,7 +43,12 @@ async def response_wrapper(request: Request, call_next):
             error_code = detail.get("code", "ERROR")
             error_msg = detail.get("message", str(detail))
         elif isinstance(detail, str):
-            error_code = detail if detail.isupper() and "_" in detail else "ERROR"
+            if detail.isupper() and "_" in detail:
+                error_code = detail
+            elif "not authenticated" in detail.lower():
+                error_code = "AUTH_REQUIRED"
+            else:
+                error_code = "ERROR"
             error_msg = detail
         else:
             error_code = "ERROR"
@@ -57,4 +62,9 @@ async def response_wrapper(request: Request, call_next):
 
     headers = {"content-type": "application/json"}
     headers.update(cors_headers)
-    return JSONResponse(content=wrapped, status_code=response.status_code, headers=headers)
+    return JSONResponse(
+        content=wrapped,
+        status_code=response.status_code,
+        headers=headers,
+        background=response.background,
+    )

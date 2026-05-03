@@ -122,12 +122,19 @@ async function handleGenerate() {
       const formData = new FormData()
       formData.append('file', file)
 
-      const uploadData = await apiClient('/api/files/upload', {
-        method: 'POST',
-        body: formData
-      })
-
-      fileIds.push(uploadData.data.id)
+      try {
+        const uploadData = await apiClient('/api/files/upload', {
+          method: 'POST',
+          body: formData
+        })
+        fileIds.push(uploadData.data.id)
+      } catch (err) {
+        if (err.code === 'DUPLICATE_FILE') {
+          fileIds.push(err.details.existing_file_id)
+        } else {
+          throw err
+        }
+      }
     }
 
     const apiConfig = showConfig.value ? {

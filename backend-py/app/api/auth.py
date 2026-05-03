@@ -18,6 +18,11 @@ from app.services.auth_service import create_token, decode_token, hash_password,
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
+def _provider_str(identity) -> str:
+    p = identity.provider
+    return p.value if hasattr(p, 'value') else str(p)
+
+
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
@@ -54,7 +59,7 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
     token = create_token(user.id, user.role, user.membershipType)
     user_resp = _user_to_response(user, body.email, [
-        {"id": identity.id, "provider": identity.provider.value, "identifier": identity.identifier}
+        {"id": identity.id, "provider": _provider_str(identity), "identifier": identity.identifier}
     ])
     return TokenResponse(token=token, user=user_resp)
 
@@ -94,7 +99,7 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     token = create_token(user.id, user.role, user.membershipType)
     user_resp = _user_to_response(
         user, body.email,
-        [{"id": i.id, "provider": i.provider.value, "identifier": i.identifier} for i in (user.identities or [])]
+        [{"id": i.id, "provider": _provider_str(i), "identifier": i.identifier} for i in (user.identities or [])]
     )
     return TokenResponse(token=token, user=user_resp)
 
@@ -133,13 +138,13 @@ async def me(
 
     email = ""
     for ident in current_user.identities:
-        if ident.provider == IdentityProvider.password:
+        if _provider_str(ident) == "password":
             email = ident.identifier
             break
 
     resp = _user_to_response(
         current_user, email,
-        [{"id": i.id, "provider": i.provider.value, "identifier": i.identifier} for i in (current_user.identities or [])]
+        [{"id": i.id, "provider": _provider_str(i), "identifier": i.identifier} for i in (current_user.identities or [])]
     )
     resp.stats = stats
     return resp
