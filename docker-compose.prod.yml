@@ -19,24 +19,24 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ./backend-py
       dockerfile: Dockerfile
     image: easytest-backend:prod
     restart: unless-stopped
     volumes:
-      - ./data/uploads:/app/uploads
+      - ./data/uploads:/data/uploads
+      - ./data/chroma:/data/chroma
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-24h}
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1}
       - CORS_ORIGIN=${CORS_ORIGIN}
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-20971520}
-      - UPLOAD_DIR=/app/uploads
-      - DEFAULT_USER_QUOTA=${DEFAULT_USER_QUOTA:-10}
-      - STORAGE_PROVIDER=local
+      - UPLOAD_DIR=/data/uploads
+      - CHROMA_PERSIST_DIR=/data/chroma
+      - DEFAULT_FREE_GENERATIONS=${DEFAULT_FREE_GENERATIONS:-20}
     depends_on:
       postgres:
         condition: service_healthy

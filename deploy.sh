@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "=== V0.5 部署脚本 ==="
+echo "=== V0.6 部署脚本 ==="
 echo ""
 
 BRANCH=${1:-develop}
