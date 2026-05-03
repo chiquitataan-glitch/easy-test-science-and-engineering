@@ -1,33 +1,89 @@
-# Easy Test - AI试卷生成系统
+# Easy Test — AI 智能试卷生成系统
 
-基于 DeepSeek AI 的智能试卷生成 Web 应用。上传课件资料（PDF/DOCX/PPT/PPTX），自动提取文本内容，调用 DeepSeek 大语言模型生成结构化复习试卷。
+基于大语言模型与 RAG（检索增强生成）的智能试卷生成平台。上传课件资料（PDF/DOCX/PPT/PPTX），系统自动提取文本、分类分块、向量化存储，调用 DeepSeek 大模型生成结构化复习试卷，支持 DOCX 导出。
 
-**v0.5.0** — MVP 可用版
+**v0.6.0** — Python 后端 + RAG 知识管道
 
 ## 技术栈
 
-| 层 | 技术 |
-|------|------|
-| 前端 | Vue 3 (Composition API) + Vite 5 + vue-router 4 |
-| 后端 | Node.js + Express |
-| 数据库 | PostgreSQL 16 + Prisma ORM |
-| 鉴权 | JWT + bcrypt |
-| AI | DeepSeek API (`deepseek-chat`) |
-| 文件解析 | pdf-parse, mammoth, officeparser, JSZip |
-| PPT 转换 | LibreOffice Impress (headless) |
-| 容器化 | Docker + Docker Compose |
+| 层 | v0.5（旧版） | v0.6（当前） |
+|------|------------|------------|
+| 前端 | Vue 3 + Vite 5 + vue-router 4 | 同左 |
+| 后端 | Node.js + Express | **Python FastAPI** |
+| 数据库 | PostgreSQL 16 + Prisma ORM | PostgreSQL 16 + **SQLAlchemy 2.0（异步）** |
+| 向量存储 | — | **ChromaDB** |
+| LLM 框架 | 直接调用 DeepSeek API | **LangChain + LangChain-DeepSeek** |
+| 鉴权 | JWT + bcrypt | JWT + python-jose + passlib |
+| 文件解析 | pdf-parse, mammoth, officeparser | **PyPDF2, python-docx, python-pptx, mammoth** |
+| 容器化 | Docker + Docker Compose | 同左 + Nginx 反向代理 |
 
-## V0.5 功能
+## 核心功能
 
-- **用户系统**：邮箱注册/登录，JWT 鉴权，token 自动恢复
-- **数据持久化**：PostgreSQL + Prisma，10 张业务表
-- **文件管理**：上传 PDF/DOCX/PPT/PPTX 自动入库，用户资源隔离
-- **试卷历史**：生成记录永久保存，支持列表/详情/重新生成
-- **题目拆分**：每道题独立存储，支持按题查询
-- **额度控制**：默认 10 次生成额度，Prisma 事务防并发超扣
-- **质量报告**：评分（0-100）、校验警告、知识点覆盖统计
-- **前端路由**：6 个页面（首页/历史/详情/个人中心/登录/注册）
-- **V1.0 预留**：微信登录/小程序/支付/对象存储字段已就绪
+### 文件处理
+- **多格式解析**：PDF、DOCX、PPT、PPTX 文本提取
+- **智能分类**：自动识别文档学科类别
+- **智能分块**：按语义边界切分文档，保留上下文完整性
+- **向量嵌入**：分块内容向量化，写入 ChromaDB 向量数据库
+
+### 试卷生成
+- **RAG 增强**：基于向量检索召回最相关知识点，注入 LLM 上下文
+- **多题型支持**：单选题、多选题、填空题、简答题、论述题
+- **灵活配置**：各题型数量、分值、难度比例可自定义
+- **Few-shot 示例**：内置少样本示例提升生成质量
+- **DOCX 导出**：一键导出标准 Word 格式试卷
+
+### 用户系统
+- **注册/登录**：邮箱 + 密码注册登录，JWT 鉴权
+- **额度控制**：免费用户 20 次生成额度，数据库事务防并发超扣
+- **数据隔离**：用户资源完全隔离，只能访问自己的文件和试卷
+- **试卷历史**：生成记录永久保存，支持列表、详情、重新生成
+
+### 部署运维
+- **Docker 一键部署**：`docker compose up -d`
+- **Nginx 反向代理**：前端静态资源 + API 代理 + SSL 预留
+- **数据库迁移**：Alembic 自动迁移
+- **健康检查**：`/health` 端点 + 容器健康检查
+
+## 系统架构
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                      用户浏览器                            │
+└─────────────┬────────────────────────────────────────────┘
+              │ HTTP
+┌─────────────▼────────────────────────────────────────────┐
+│                  Nginx (:80/:443)                         │
+│         静态资源 /  API 代理 / SSL                         │
+└──────┬────────────────────────────────┬──────────────────┘
+       │ /api/*                         │ /*
+┌──────▼──────────┐          ┌──────────▼──────────┐
+│  FastAPI :8000  │          │ 前端静态文件 (dist)   │
+│  Python 后端     │          │  Vue 3 SPA           │
+└──────┬──────────┘          └─────────────────────┘
+       │
+       ├──► PostgreSQL 16    — 用户/文件/试卷/额度/日志
+       ├──► ChromaDB         — 文档向量存储与检索
+       └──► DeepSeek API     — LLM 推理（通过 LangChain）
+```
+
+### 文件处理管道
+
+```
+上传文件 → 文本解析 → 学科分类 → 语义分块 → 向量嵌入 → ChromaDB
+                                                        │
+                                                        ▼
+                                                   准备就绪 (ready)
+```
+
+### 试卷生成管道
+
+```
+用户配置 ──► RAG 检索相关块 ──► 构建 Prompt ──► DeepSeek 推理
+                                                    │
+                     ┌──────────────────────────────┘
+                     ▼
+           JSON 解析 → 校验 → 入库 → 返回 / DOCX 导出
+```
 
 ## 快速开始
 
@@ -39,94 +95,93 @@
 ### 1. 配置环境变量
 
 ```bash
-cp backend/.env.example backend/.env
-# 编辑 backend/.env，至少填入以下 3 项：
-#   DEEPSEEK_API_KEY=sk-xxx
-#   POSTGRES_PASSWORD=your_password
-#   JWT_SECRET=随机生成64字符以上
+cp backend-py/.env.example backend-py/.env
 ```
 
-### 2. Docker Compose 启动
+编辑 `backend-py/.env`，填入必填项：
+
+```env
+DEEPSEEK_API_KEY=sk-你的密钥
+DATABASE_URL=postgresql+asyncpg://easy_test:你的密码@postgres:5432/easy_test
+JWT_SECRET=随机生成64位以上的字符串
+```
+
+### 2. 启动服务
 
 ```bash
-docker compose up --build
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-启动顺序：postgres → backend（自动 migrate + 启动）→ frontend。首次构建约 5-8 分钟。
+启动顺序：postgres → backend（FastAPI）→ nginx。首次构建约 5–8 分钟。
 
-### 3. 初始化种子数据（可选）
-
-```bash
-docker compose exec backend npm run prisma:seed
-```
-
-### 4. 访问
+### 3. 访问
 
 | 地址 | 说明 |
 |------|------|
-| http://localhost:5173 | 前端界面 |
-| http://localhost:3000/health | 后端健康检查 |
+| `http://localhost` | 前端界面 |
+| `http://localhost/api/health` | 后端健康检查 |
+| `http://localhost/docs` | Swagger API 文档 |
 
-### 本地启动（无需 Docker）
+### 本地开发（无需 Docker 全部服务）
 
 ```bash
-# 1. 启动 PostgreSQL
-docker compose up -d postgres
+# 1. 启动 PostgreSQL（Docker）
+docker compose -f docker-compose.prod.yml up -d postgres
 
-# 2. 后端
-cd backend && cp .env.example .env && npm install
-npx prisma migrate dev && npx prisma db seed
+# 2. 启动 Python 后端
+cd backend-py
+python -m venv venv
+venv\Scripts\activate      # Windows
+# source venv/bin/activate  # macOS/Linux
+pip install -r requirements.txt
+cp .env.example .env        # 编辑配置
+uvicorn app.main:app --reload --port 8000
+
+# 3. 启动前端
+cd frontend
+npm install
 npm run dev
-
-# 3. 前端
-cd frontend && npm install && npm run dev
 ```
 
-## 接口概览
+## API 概览
 
 | 模块 | 接口数 | 说明 |
 |------|:---:|------|
 | System | 2 | 健康检查、DeepSeek 连通测试 |
-| Auth | 5 | 注册/登录/me/退出/微信占位 |
-| Files | 4 | 上传(鉴权)/列表/详情/删除 |
-| Papers | 4 | 生成(扣quota)/列表/详情/重新生成 |
+| Auth | 5 | 注册/登录/当前用户/退出/微信预留 |
+| Files | 5 | 上传/列表/详情/删除/重解析 |
+| Papers | 5 | 生成/列表/详情/重新生成/DOCX 导出 |
 | Quota | 2 | 额度查询/使用流水 |
+| Admin | 1 | 管理接口 |
 
-> 详细文档见 [docs/API.md](docs/API.md)，完整 17 个接口含 curl 示例和错误码。
+> 完整接口文档请访问运行中的 Swagger UI：`http://localhost/docs`
 
-## 支持文件格式
+## 支持的文件格式
 
-| 格式 | 文本解析 | 图片 OCR | 依赖 |
-|------|:---:|:---:|------|
-| PDF | ✅ | - | pdf-parse（纯 JS） |
-| DOCX | ✅ | - | mammoth（纯 JS） |
-| PPTX | ✅ | ⚠️ 需 Vision API | officeparser + JSZip |
-| PPT | ✅（转为 PPTX） | ⚠️ 需 Vision API | LibreOffice |
+| 格式 | 文本解析 | 依赖 |
+|------|:---:|------|
+| PDF | ✅ | PyPDF2 |
+| DOCX | ✅ | python-docx / mammoth |
+| PPTX | ✅ | python-pptx |
+| PPT | ⚠️ | 需转换为 PPTX 后解析 |
 
 ## 环境变量
 
 | 变量 | 必填 | 默认值 | 说明 |
 |------|:---:|--------|------|
-| `DEEPSEEK_API_KEY` | ✅ | - | DeepSeek API 密钥 |
-| `POSTGRES_PASSWORD` | ✅ | - | 数据库密码 |
-| `JWT_SECRET` | ✅ | - | JWT 签名密钥（≥64字符） |
+| `DEEPSEEK_API_KEY` | ✅ | — | DeepSeek API 密钥 |
+| `DATABASE_URL` | ✅ | — | PostgreSQL 连接串（asyncpg） |
+| `JWT_SECRET` | ✅ | — | JWT 签名密钥（≥64字符） |
 | `NODE_ENV` | ❌ | development | 运行环境 |
-| `PORT` | ❌ | 3000 | 后端端口 |
-| `DATABASE_URL` | ❌ | postgresql://easy_test:xxx@postgres:5432/easy_test | 数据库连接 |
-| `POSTGRES_USER` | ❌ | easy_test | 数据库用户 |
-| `POSTGRES_DB` | ❌ | easy_test | 数据库名 |
 | `JWT_EXPIRES_IN` | ❌ | 24h | Token 有效期 |
-| `JWT_REFRESH_SECRET` | ❌ | - | Refresh Token 密钥（V1.0） |
-| `JWT_REFRESH_EXPIRES_IN` | ❌ | 7d | Refresh Token 有效期（V1.0） |
-| `DEEPSEEK_API_URL` | ❌ | https://api.deepseek.com/v1/chat/completions | API 地址 |
-| `UPLOAD_DIR` | ❌ | ./uploads | 上传目录 |
+| `DEEPSEEK_BASE_URL` | ❌ | `https://api.deepseek.com/v1` | API 地址 |
+| `UPLOAD_DIR` | ❌ | /data/uploads | 上传目录 |
+| `CHROMA_PERSIST_DIR` | ❌ | /data/chroma | ChromaDB 持久化目录 |
 | `MAX_FILE_SIZE` | ❌ | 20971520（20MB） | 文件大小限制 |
-| `DEFAULT_USER_QUOTA` | ❌ | 10 | 新用户默认额度 |
-| `CORS_ORIGIN` | ❌ | http://localhost:5173 | CORS 白名单 |
-| `WECHAT_APP_ID` | ❌ | - | 微信 AppID（V1.0） |
-| `WECHAT_APP_SECRET` | ❌ | - | 微信 AppSecret（V1.0） |
-| `STORAGE_PROVIDER` | ❌ | local | 存储后端（V1.0 可切 s3） |
-| `LOCAL_STORAGE_DIR` | ❌ | ./uploads | 本地存储目录 |
+| `DEFAULT_FREE_GENERATIONS` | ❌ | 20 | 新用户免费生成额度 |
+| `CORS_ORIGIN` | ❌ | `http://localhost:5173` | CORS 白名单 |
+| `WECHAT_APP_ID` | ❌ | — | 微信 AppID（预留） |
+| `WECHAT_APP_SECRET` | ❌ | — | 微信 AppSecret（预留） |
 
 ## 前端页面
 
@@ -136,46 +191,87 @@ cd frontend && npm install && npm run dev
 | `/register` | 注册 | 昵称 + 邮箱 + 密码 |
 | `/` | 首页 | 上传文件 + 配置 + 生成试卷 |
 | `/papers` | 试卷历史 | 分页列表 |
-| `/papers/:id` | 试卷详情 | 完整试卷 + 重新生成 |
+| `/papers/:id` | 试卷详情 | 完整试卷 + 重新生成 + DOCX 导出 |
 | `/profile` | 个人中心 | 用户信息 + 额度 |
-
-## V1.0 预留
-
-详见 [docs/TASKS.md](docs/TASKS.md#v10-小程序预留说明)，关键预留点：
-
-- `user_identities` 支持微信 openid/unionid
-- `ClientType` 枚举已含 `wechat_mini_program`
-- `POST /api/auth/wechat-mini-program-login` 占位接口
-- `storage_provider`/`storage_key` 对象存储
-- `plans` 表支付套餐
-- `usage_records.client_type` 区分端用量
 
 ## 项目结构
 
 ```
-easy test/
-├── backend/
+easy-test/
+├── backend/                    # Node.js 后端（v0.5 旧版，保留兼容）
 │   ├── prisma/
-│   │   ├── schema.prisma      # 数据模型（10 表 5 枚举）
-│   │   └── seed.js            # 种子数据
+│   │   ├── schema.prisma       # 数据模型
+│   │   ├── migrations/         # Prisma 迁移文件
+│   │   └── seed.js             # 种子数据
 │   ├── src/
-│   │   ├── config/            # 配置（env/fileTypes/paperConfig）
-│   │   ├── middleware/        # auth + errorHandler
-│   │   ├── routes/            # auth/files/papers/quota + V0.2 兼容
-│   │   ├── services/          # 业务逻辑 + parsers + DeepSeek
-│   │   ├── utils/             # response + errors
-│   │   └── index.js           # 入口
+│   │   ├── config/             # 配置
+│   │   ├── middleware/         # 中间件
+│   │   ├── routes/             # 路由
+│   │   ├── services/           # 业务逻辑 + 解析器
+│   │   ├── utils/              # 工具函数
+│   │   └── index.js
 │   ├── Dockerfile
 │   └── .env.example
-├── frontend/
+├── backend-py/                 # Python FastAPI 后端（v0.6 当前版）
+│   ├── app/
+│   │   ├── api/                # auth / files / papers / quota / admin
+│   │   ├── middleware/         # auth / response
+│   │   ├── models/             # SQLAlchemy 数据模型
+│   │   ├── schemas/            # Pydantic 请求/响应模型
+│   │   ├── services/           # 业务服务
+│   │   │   ├── auth_service.py       # 注册/登录/JWT
+│   │   │   ├── file_service.py       # 上传/解析/管理
+│   │   │   ├── paper_generator.py    # 试卷生成
+│   │   │   ├── quota_service.py      # 额度管理
+│   │   │   ├── classifier.py         # 文档分类
+│   │   │   ├── chunker.py            # 语义分块
+│   │   │   ├── embedder.py           # 向量嵌入
+│   │   │   ├── chroma_store.py       # ChromaDB 操作
+│   │   │   ├── rag_engine.py         # RAG 检索引擎
+│   │   │   └── docx_exporter.py      # DOCX 导出
+│   │   ├── config.py           # 全局配置
+│   │   ├── database.py         # 数据库连接
+│   │   └── main.py             # FastAPI 入口
+│   ├── prompts/
+│   │   └── fewshot_examples.json  # Few-shot 示例
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── .env.example
+├── frontend/                   # Vue 3 前端
 │   └── src/
-│       ├── api/               # apiClient fetch 封装
-│       ├── components/        # NavBar + PaperContent
-│       ├── stores/            # authStore reactive
-│       ├── views/             # 6 个页面组件
-│       ├── router.js          # vue-router
-│       └── App.vue            # 布局壳
-├── docs/                      # API/ROADMAP/TASKS/DEV_ENV
-├── docker-compose.yml
-└── CHANGELOG.md
+│       ├── api/                # API 客户端
+│       ├── components/         # 公共组件
+│       ├── stores/             # 状态管理
+│       ├── views/              # 页面组件
+│       ├── router.js           # 路由配置
+│       └── App.vue
+├── nginx/                      # Nginx 配置
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── ssl/                    # SSL 证书（预留）
+├── docs/                       # 文档
+├── data/                       # 数据目录（运行时）
+│   ├── uploads/                # 上传文件
+│   ├── chroma/                 # ChromaDB 向量数据
+│   └── pgdata/                 # PostgreSQL 数据
+├── docker-compose.prod.yml     # 生产环境编排
+├── deploy.sh                   # 部署脚本
+├── CHANGELOG.md                # 更新日志
+└── README.md
 ```
+
+## 路线图
+
+### 已完成
+- [x] v0.1 — 基础文件上传与 DeepSeek 试卷生成
+- [x] v0.2 — PPTX/PPT 支持、题型配置、质量评分、知识点提取
+- [x] v0.5 — 用户系统、PostgreSQL 持久化、额度控制、前端完整页面
+- [x] v0.6 — Python FastAPI 后端、RAG 知识管道、ChromaDB、DOCX 导出
+
+### 计划中
+- [ ] v0.7 — 管理后台、会员套餐、微信小程序登录
+- [ ] v1.0 — 微信小程序端、对象存储、支付集成、Refresh Token
+
+## License
+
+MIT
