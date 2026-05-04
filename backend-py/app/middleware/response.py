@@ -42,6 +42,7 @@ async def response_wrapper(request: Request, call_next):
         if isinstance(detail, dict):
             error_code = detail.get("code", "ERROR")
             error_msg = detail.get("message", str(detail))
+            error_details = detail
         elif isinstance(detail, str):
             if detail.isupper() and "_" in detail:
                 error_code = detail
@@ -50,14 +51,19 @@ async def response_wrapper(request: Request, call_next):
             else:
                 error_code = "ERROR"
             error_msg = detail
+            error_details = data.get("details", detail)
         else:
             error_code = "ERROR"
             error_msg = str(detail)
+            error_details = detail
         wrapped = {
             "success": False,
             "data": None,
             "message": error_msg,
-            "error": {"code": error_code, "details": data},
+            "error": {
+                "code": error_code,
+                "details": error_details,
+            },
         }
 
     headers = {"content-type": "application/json"}
