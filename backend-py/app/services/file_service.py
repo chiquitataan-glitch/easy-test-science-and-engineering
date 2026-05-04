@@ -150,7 +150,7 @@ async def process_file_extraction(file_id: str):
 
             file.parsedText = text
             file.totalChars = len(text)
-            file.parsedAt = datetime.now(timezone.utc)
+            file.parsedAt = datetime.utcnow()
             file.status = FileStatus.parsed
             await session.commit()
 

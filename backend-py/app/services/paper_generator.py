@@ -410,7 +410,7 @@ async def generate_paper(
             "qualityReport": None,
             "questions": [],
             "failReason": last_error,
-            "createdAt": datetime.now(timezone.utc).isoformat(),
+            "createdAt": datetime.utcnow().isoformat() + "Z",
         }
 
     await _deduct_quota(user)
@@ -498,6 +498,14 @@ async def _validate_and_wait_docs(doc_ids: list[str], user_id: str) -> list[str]
     dead_ids = [fid for fid, f in files.items() if f.status == FileStatus.failed]
 
     if waiting_ids:
+        from app.services.file_service import process_file_extraction
+
+        for fid in waiting_ids:
+            f = files.get(fid)
+            if f and f.status in (FileStatus.pending, FileStatus.parsed):
+                logger.info("re-queuing stalled file %s for processing", fid)
+                asyncio.create_task(process_file_extraction(fid))
+
         logger.info("waiting for %d files to process: %s", len(waiting_ids), waiting_ids)
         elapsed = 0
         while elapsed < MAX_WAIT:
@@ -542,7 +550,7 @@ async def _validate_and_wait_docs(doc_ids: list[str], user_id: str) -> list[str]
 
 
 async def _check_quota(user: User):
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
 
     async with async_session() as session:
         result = await session.execute(
@@ -710,7 +718,7 @@ async def _persist_paper(
     original_paper_id: str | None = None,
 ) -> dict:
     paper_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
 
     paper = GeneratedPaper(
         id=paper_id,

@@ -28,7 +28,7 @@ def _parse_expires_in(expires_in: str) -> timedelta:
 
 
 def create_token(user_id: str, role: str, membership_type: str) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     expires_delta = _parse_expires_in(settings.JWT_EXPIRES_IN)
     payload = {
         "sub": user_id,
