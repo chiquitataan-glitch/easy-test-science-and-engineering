@@ -86,14 +86,18 @@ async def upload_file(
     )
     dup = existing.scalar_one_or_none()
     if dup is not None:
-        os.remove(tmp_path)
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "code": "DUPLICATE_FILE",
-                "existing_file_id": dup.id,
-            },
-        )
+        if dup.status in (FileStatus.failed, FileStatus.pending):
+            await db.delete(dup)
+            await db.commit()
+        else:
+            os.remove(tmp_path)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "DUPLICATE_FILE",
+                    "existing_file_id": dup.id,
+                },
+            )
 
     mime_type = MIME_MAP.get(ext_saved, "application/octet-stream")
     file_record = UploadedFile(
