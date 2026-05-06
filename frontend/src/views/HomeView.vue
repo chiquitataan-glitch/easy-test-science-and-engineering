@@ -159,7 +159,7 @@ async function handleGenerate() {
     })
 
     await refreshUser()
-    router.push(`/papers/${generateData.data.paperId}`)
+    router.push(`/papers/${generateData.data.id}`)
   } catch (err) {
     if (err.code === 'QUOTA_EXCEEDED') {
       error.value = '生成次数已用完。未来支持购买额度。'

@@ -1,14 +1,14 @@
 import time
-from langchain_deepseek import DeepSeekEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from app.config import settings
 
 BATCH_SIZE = 20
 MAX_RETRIES = 3
 
-embeddings = DeepSeekEmbeddings(
+embeddings = OpenAIEmbeddings(
     model="deepseek-embed",
     api_key=settings.DEEPSEEK_API_KEY,
-    api_base=settings.DEEPSEEK_BASE_URL,
+    base_url=settings.DEEPSEEK_BASE_URL,
 )
 
 

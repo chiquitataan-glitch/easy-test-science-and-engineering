@@ -13,10 +13,15 @@
     <template v-else-if="paperData">
       <div class="detail-toolbar">
         <router-link to="/papers" class="btn-link">← 返回列表</router-link>
-        <button class="btn-regenerate" @click="handleRegenerate" :disabled="regenerating">
-          <span v-if="regenerating" class="spinner"></span>
-          {{ regenerating ? ' 重新生成中...' : '🔄 重新生成' }}
-        </button>
+        <div class="toolbar-actions">
+          <button class="btn-export" @click="handleExport" :disabled="exporting">
+            {{ exporting ? '导出中...' : '📥 导出 DOCX' }}
+          </button>
+          <button class="btn-regenerate" @click="handleRegenerate" :disabled="regenerating">
+            <span v-if="regenerating" class="spinner"></span>
+            {{ regenerating ? ' 重新生成中...' : '🔄 重新生成' }}
+          </button>
+        </div>
       </div>
 
       <div v-if="regenerateError" class="error-box">
@@ -54,6 +59,7 @@ const loading = ref(true)
 const error = ref('')
 const regenerating = ref(false)
 const regenerateError = ref('')
+const exporting = ref(false)
 
 async function fetchPaper() {
   loading.value = true
@@ -75,11 +81,41 @@ async function handleRegenerate() {
   try {
     const data = await apiClient(`/api/papers/${route.params.id}/regenerate`, { method: 'POST' })
     await refreshUser()
-    router.push(`/papers/${data.data.paperId}`)
+    router.push(`/papers/${data.data.id}`)
   } catch (err) {
     regenerateError.value = err.message || '重新生成失败'
   } finally {
     regenerating.value = false
+  }
+}
+
+async function handleExport() {
+  exporting.value = true
+  try {
+    const token = (await import('../stores/authStore')).state.token
+    const response = await fetch(`/api/papers/${route.params.id}/export`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}))
+      throw new Error(errData.detail || errData.message || '导出失败')
+    }
+    const blob = await response.blob()
+    const disposition = response.headers.get('Content-Disposition') || ''
+    const filenameMatch = disposition.match(/filename="?(.+?)"?$/)
+    const filename = filenameMatch ? filenameMatch[1] : '试卷.docx'
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    regenerateError.value = err.message || '导出失败'
+  } finally {
+    exporting.value = false
   }
 }
 

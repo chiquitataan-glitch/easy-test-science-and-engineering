@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import os
 import re
 import time
 import uuid
@@ -23,8 +22,6 @@ from app.services.rag_engine import retrieve_relevant_chunks
 
 logger = logging.getLogger(__name__)
 
-EXAMPLES_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'prompts', 'fewshot_examples.json')
-
 TYPE_NAMES = {
     'single_choice': '单选题',
     'multi_choice': '多选题',
@@ -36,12 +33,6 @@ TYPE_NAMES = {
 ALL_VALID_TYPES = list(TYPE_NAMES.keys())
 
 VALID_DIFFICULTIES = ['easy', 'medium', 'hard']
-
-DIFFICULTY_NAMES = {
-    'easy': '简单',
-    'medium': '中等',
-    'hard': '困难',
-}
 
 DEFAULT_CONFIG = {
     'types': {
@@ -57,62 +48,6 @@ DEFAULT_CONFIG = {
         'hard': 0.2,
     },
 }
-
-
-def _load_examples():
-    with open(EXAMPLES_PATH, 'r', encoding='utf-8') as f:
-        return json.load(f)
-
-
-def format_fewshot_by_category(category: str, types: Optional[list] = None) -> str:
-    examples_data = _load_examples()
-    subjects = examples_data.get('subjects', {})
-
-    target_subject = subjects.get(category, subjects.get('general', {}))
-    if not target_subject:
-        return ''
-
-    if types is None:
-        types = list(target_subject.keys())
-
-    parts = []
-    for qtype in types:
-        if qtype not in target_subject:
-            continue
-
-        type_examples = target_subject[qtype]
-        type_label = TYPE_NAMES.get(qtype, qtype)
-
-        for idx, ex in enumerate(type_examples, 1):
-            parts.append(_format_single_example(qtype, type_label, idx, ex))
-
-    return '\n'.join(parts)
-
-
-def _format_single_example(qtype, type_label, idx, ex):
-    lines = [f'【示例 {idx}】题型：{type_label}']
-
-    is_cross = ex.get('is_cross_doc', False)
-    if is_cross:
-        lines.append('[综合题 · 跨文档]')
-
-    lines.append(f'难度：{DIFFICULTY_NAMES.get(ex.get("difficulty", "medium"), "中等")}')
-    lines.append(f'题目：{ex["content"]}')
-
-    options = ex.get('options')
-    if options and len(options) > 0:
-        for opt in options:
-            lines.append(f'  {opt["key"]}. {opt["value"]}')
-
-    lines.append(f'答案：{ex["answer"]}')
-    lines.append(f'解析：{ex["analysis"]}')
-    lines.append(f'知识点：{"、".join(ex.get("knowledge_points", []))}')
-
-    if is_cross:
-        lines.append(f'跨文档标记：is_cross_doc = true')
-
-    lines.append('')
-    return '\n'.join(lines)
 
 
 def build_generation_prompt(
@@ -131,8 +66,6 @@ def build_generation_prompt(
     parts.append(_build_reference_section(retrieved_chunks))
 
     parts.append(_build_config_section(config))
-
-    parts.append(_build_fewshot_section(category, active_types))
 
     parts.append(_build_rules_section())
 
@@ -215,27 +148,8 @@ def _build_config_section(config: dict) -> str:
     return '\n'.join(lines)
 
 
-def _build_fewshot_section(category: str, active_types: list) -> str:
-    lines = ['=== 第三部分：学科真题示例 ===', '']
-
-    fewshot_text = format_fewshot_by_category(category, active_types)
-
-    if not fewshot_text:
-        fewshot_text = format_fewshot_by_category('general', active_types)
-
-    if not fewshot_text:
-        lines.append('（无匹配的真题示例）')
-        return '\n'.join(lines)
-
-    lines.append(f'以下为"{category}"学科的真实考题示例，供你参考题型格式和出题风格：')
-    lines.append('')
-    lines.append(fewshot_text)
-
-    return '\n'.join(lines)
-
-
 def _build_rules_section() -> str:
-    return '''=== 第四部分：严格规则 ===
+    return '''=== 第三部分：严格规则 ===
 
 请严格遵守以下规则：
 
@@ -270,7 +184,7 @@ def _build_rules_section() -> str:
 
 
 def _build_output_schema_section(active_types: list) -> str:
-    lines = ['=== 第五部分：输出 JSON Schema ===', '']
+    lines = ['=== 第四部分：输出 JSON Schema ===', '']
     lines.append('你必须输出以下结构的纯 JSON：')
     lines.append('')
     lines.append('```json')
@@ -395,7 +309,7 @@ async def generate_paper(
             error_message=last_error,
         )
         return {
-            "paperId": "",
+            "id": "",
             "userId": user.id,
             "courseName": course_name,
             "paperTitle": None,
@@ -550,7 +464,7 @@ async def _validate_and_wait_docs(doc_ids: list[str], user_id: str) -> list[str]
 
 
 async def _check_quota(user: User):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     async with async_session() as session:
         result = await session.execute(

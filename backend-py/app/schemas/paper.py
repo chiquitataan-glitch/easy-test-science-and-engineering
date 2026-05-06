@@ -36,9 +36,11 @@ class PaperResponse(BaseModel):
     userId: str
     courseName: str
     paperTitle: str | None = None
+    paperJson: dict | None = None
     status: str
     questionCount: int
     totalScore: float | None = None
+    qualityScore: float | None = None
     durationSeconds: float | None = None
     category: str | None = None
     config: dict | None = None
@@ -47,4 +49,8 @@ class PaperResponse(BaseModel):
     qualityReport: dict | None = None
     questions: list[QuestionItem] = []
     failReason: str | None = None
+    modelName: str | None = None
+    promptVersion: str | None = None
+    tokenUsage: int | None = None
+    originalPaperId: str | None = None
     createdAt: str | None = None

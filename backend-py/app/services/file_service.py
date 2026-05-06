@@ -173,10 +173,14 @@ async def process_file_extraction(file_id: str):
             return
 
         except Exception as e:
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.warning("embedding failed for file %s, marking ready for prompt fallback: %s", file_id, e)
+            _chunk_count = len(chunks) if 'chunks' in dir() and chunks else 0
             file = await session.get(UploadedFile, file_id)
             if file:
-                file.status = FileStatus.failed
-                file.errorMessage = str(e)
+                file.status = FileStatus.ready
+                file.chunkCount = _chunk_count
                 await session.commit()
             return
 
@@ -281,6 +285,7 @@ async def process_file_embedding(file_id: str, category: str, user_id: str):
         if not file:
             return
 
+        chunks = []
         try:
             file.status = FileStatus.embedding
             await session.commit()
@@ -318,8 +323,11 @@ async def process_file_embedding(file_id: str, category: str, user_id: str):
             await session.commit()
 
         except Exception as e:
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.warning("embedding failed for file %s, marking ready for prompt fallback: %s", file_id, e)
             file = await session.get(UploadedFile, file_id)
             if file:
-                file.status = FileStatus.failed
-                file.errorMessage = str(e)
+                file.status = FileStatus.ready
+                file.chunkCount = len(chunks)
                 await session.commit()

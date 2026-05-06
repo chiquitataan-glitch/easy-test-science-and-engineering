@@ -1,16 +1,20 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from sqlalchemy import select, func
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.middleware.auth import get_current_user
 from app.models.enums import PaperStatus
 from app.models.generated_paper import GeneratedPaper
+from app.models.paper_question import PaperQuestion
 from app.models.user import User
 from app.schemas.paper import GeneratePaperRequest, PaperResponse, QuestionItem
 from app.services import paper_generator as paper_generator_service
+from app.services.docx_exporter import export_paper_from_model
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +60,7 @@ async def list_papers(
     result = await db.execute(
         select(GeneratedPaper)
         .where(GeneratedPaper.userId == current_user.id)
+        .options(selectinload(GeneratedPaper.paperQuestions))
         .order_by(GeneratedPaper.createdAt.desc())
         .offset(offset)
         .limit(pageSize)
@@ -73,7 +78,9 @@ async def get_paper(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(GeneratedPaper).where(GeneratedPaper.id == paper_id)
+        select(GeneratedPaper)
+        .where(GeneratedPaper.id == paper_id)
+        .options(selectinload(GeneratedPaper.paperQuestions))
     )
     paper = result.scalar_one_or_none()
     if not paper:
@@ -134,6 +141,42 @@ async def regenerate_paper(
     except Exception as e:
         logger.exception("unexpected error in regenerate_paper")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{paper_id}/export")
+async def export_paper_docx(
+    paper_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(GeneratedPaper)
+        .where(GeneratedPaper.id == paper_id)
+        .options(selectinload(GeneratedPaper.paperQuestions))
+    )
+    paper = result.scalar_one_or_none()
+    if not paper:
+        raise HTTPException(status_code=404, detail="paper not found")
+    if paper.userId != current_user.id:
+        raise HTTPException(status_code=404, detail="paper not found")
+
+    questions = paper.paperQuestions or []
+    if not questions:
+        raise HTTPException(status_code=400, detail="no questions to export")
+
+    try:
+        docx_bytes = export_paper_from_model(paper, questions)
+    except Exception as e:
+        logger.exception("failed to export paper %s", paper_id)
+        raise HTTPException(status_code=500, detail=str(e))
+
+    filename = f"{paper.paperTitle or paper.courseName or '试卷'}.docx"
+
+    return Response(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 def _paper_to_list_item(paper: GeneratedPaper) -> dict:
