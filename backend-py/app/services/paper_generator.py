@@ -111,7 +111,7 @@ def _build_system_header():
 def _build_reference_section(retrieved_chunks: list) -> str:
     lines = ['=== 第一部分：参考资料 ===', '']
     if not retrieved_chunks:
-        lines.append('（无参考资料，请根据通用知识出题）')
+        lines.append('（无参考资料，务必严格按照课程名称和常识进行出题，不要凭空编造内容）')
         return '\n'.join(lines)
 
     for i, chunk in enumerate(retrieved_chunks, 1):
@@ -271,6 +271,10 @@ async def generate_paper(
     rag_result = await retrieve_relevant_chunks(doc_ids, question_count, category, user.id)
     retrieved_chunks = rag_result.get("chunks", [])
     retrieval_degraded = rag_result.get("retrieval_degraded", False)
+
+    if retrieval_degraded:
+        retrieved_chunks = await _load_document_texts_for_prompt(doc_ids)
+        logger.info("RAG degraded, loaded %d document texts for prompt fallback", len(retrieved_chunks))
 
     mode = "prompt" if retrieval_degraded else "rag"
     retrieval_k = 0 if retrieval_degraded else max(10, min(question_count * 2, 100))
@@ -461,6 +465,33 @@ async def _validate_and_wait_docs(doc_ids: list[str], user_id: str) -> list[str]
             raise ValueError("no valid files available for generation")
 
     return valid_ids
+
+
+async def _load_document_texts_for_prompt(doc_ids: list[str]) -> list[dict]:
+    MAX_CHARS_PER_DOC = 3000
+    async with async_session() as session:
+        result = await session.execute(
+            select(UploadedFile).where(UploadedFile.id.in_(doc_ids))
+        )
+        files = {f.id: f for f in result.scalars().all()}
+
+    chunks = []
+    for fid in doc_ids:
+        f = files.get(fid)
+        if not f or not f.parsedText:
+            continue
+        text = f.parsedText[:MAX_CHARS_PER_DOC]
+        chunks.append({
+            "content": text,
+            "fileId": fid,
+            "chunkIndex": 0,
+            "score": 1.0,
+            "fileName": f.originalName,
+        })
+
+    if not chunks:
+        logger.warning("no document texts available for prompt fallback")
+    return chunks
 
 
 async def _check_quota(user: User):

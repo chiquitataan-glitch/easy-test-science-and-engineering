@@ -43,29 +43,32 @@ def export_paper_from_model(paper, questions) -> bytes:
 
     _setup_styles(doc)
 
-    doc.add_heading(paper.paperTitle or f'{paper.courseName} 复习试卷', level=0)
+    title = paper.paperTitle or paper.courseName or '试卷'
+    doc.add_heading(str(title), level=0)
 
-    meta_text = f'课程：{paper.courseName}    |    共 {len(questions)} 题    |    总分 {sum(q.score or 0 for q in questions)} 分'
+    total_score = sum(q.score or 0 for q in questions)
+    meta_text = f'课程：{paper.courseName or "未命名"}    |    共 {len(questions)} 题    |    总分 {total_score} 分'
     p = doc.add_paragraph(meta_text)
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = p.runs[0]
-    run.font.size = Pt(10)
-    run.font.color.rgb = RGBColor(100, 100, 100)
+    if p.runs:
+        run = p.runs[0]
+        run.font.size = Pt(10)
+        run.font.color.rgb = RGBColor(100, 100, 100)
 
     doc.add_paragraph('')
 
     question_list = []
     for pq in questions:
         q = {
-            'question_no': pq.questionNo,
-            'question_type': pq.questionType,
-            'content': pq.content,
+            'question_no': pq.questionNo or 0,
+            'question_type': pq.questionType or '',
+            'content': pq.content or '',
             'options': _normalize_options(pq.options),
-            'answer': pq.answer,
-            'analysis': pq.analysis,
+            'answer': pq.answer or '',
+            'analysis': pq.analysis or '',
             'knowledge_points': pq.knowledgePoints or [],
-            'difficulty': pq.difficulty,
-            'score': pq.score,
+            'difficulty': pq.difficulty or 'medium',
+            'score': pq.score or 0,
         }
         question_list.append(q)
 
