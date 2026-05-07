@@ -12,6 +12,8 @@ TYPE_LABELS = {
     'single_choice': '单选题',
     'multi_choice': '多选题',
     'fill_blank': '填空题',
+    'true_false': '判断题',
+    'calculation': '计算题',
     'short_answer': '简答题',
     'essay': '论述题',
 }
@@ -148,7 +150,8 @@ def _add_single_question(doc, q, index):
     run.font.size = Pt(11)
 
     content_para = doc.add_paragraph(content)
-    content_para.style.font.size = Pt(11)
+    if content_para.runs:
+        content_para.runs[0].font.size = Pt(11)
 
     options = _normalize_options(q.get('options'))
     if options and qtype in ('single_choice', 'multi_choice'):
@@ -156,7 +159,8 @@ def _add_single_question(doc, q, index):
             opt_text = f'{opt.get("key", "")}. {opt.get("value", "")}'
             opt_para = doc.add_paragraph(opt_text)
             opt_para.paragraph_format.left_indent = Inches(0.3)
-            opt_para.style.font.size = Pt(11)
+            if opt_para.runs:
+                opt_para.runs[0].font.size = Pt(11)
 
     answer = q.get('answer', '')
     if answer:
