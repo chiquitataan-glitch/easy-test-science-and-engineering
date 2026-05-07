@@ -367,7 +367,7 @@ async def generate_paper(
     )
 
     result = {
-        "paperId": paper_data["id"],
+        "id": paper_data["id"],
         "userId": user.id,
         "courseName": course_name,
         "paperTitle": paper_json.get("paper_title", ""),
