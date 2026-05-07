@@ -10,7 +10,7 @@
       <button class="btn-link" @click="fetchPaper">重试</button>
     </div>
 
-    <template v-else-if="paperData">
+    <template v-else-if="detail.id">
       <div class="detail-toolbar">
         <router-link to="/papers" class="btn-link">← 返回列表</router-link>
         <div class="toolbar-actions">
@@ -29,7 +29,10 @@
         <div class="error-msg">{{ regenerateError }}</div>
       </div>
 
-      <PaperContent :paper-data="paperData" :paper-title="detail.paperTitle" :course-name="detail.courseName" />
+      <PaperContent v-if="paperData" :paper-data="paperData" :paper-title="detail.paperTitle" :course-name="detail.courseName" />
+      <div v-else class="empty-paper">
+        <p>试卷内容加载中或试卷内容为空，请尝试重新生成。</p>
+      </div>
 
       <div class="detail-meta">
         <div v-if="detail.originalPaperId" class="detail-info">

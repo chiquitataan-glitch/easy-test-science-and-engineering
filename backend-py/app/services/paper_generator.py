@@ -26,6 +26,8 @@ TYPE_NAMES = {
     'single_choice': '单选题',
     'multi_choice': '多选题',
     'fill_blank': '填空题',
+    'true_false': '判断题',
+    'calculation': '计算题',
     'short_answer': '简答题',
     'essay': '论述题',
 }
@@ -39,6 +41,8 @@ DEFAULT_CONFIG = {
         'single_choice': {'count': 8, 'score': 5},
         'multi_choice': {'count': 2, 'score': 5},
         'fill_blank': {'count': 10, 'score': 2},
+        'true_false': {'count': 0, 'score': 2},
+        'calculation': {'count': 0, 'score': 8},
         'short_answer': {'count': 2, 'score': 4},
         'essay': {'count': 1, 'score': 10},
     },
@@ -157,6 +161,8 @@ def _build_rules_section() -> str:
    - 单选题：必须包含 4 个选项（A/B/C/D），answer 为单个大写字母
    - 多选题：必须包含 4 个选项，answer 为多个字母用逗号分隔，如 "A,C,D"
    - 填空题：answer 为正确答案文字，content 中使用 "______" 标记填空位置
+   - 判断题：options 包含 A.正确 B.错误，answer 为 "A" 或 "B"，analysis 须解释理由
+   - 计算题：content 为计算问题，answer 为完整计算步骤和最终结果，analysis 为解题思路
    - 简答题：answer 为评分要点和参考答案，content 为题目要求
    - 论述题：answer 为完整的参考答案，需包含层次结构，content 为论述题目
 
@@ -234,6 +240,10 @@ def _build_output_schema_section(active_types: list) -> str:
         type_hints.append('- 选择题（single_choice/multi_choice）：options 必须包含 4 个选项，每个选项含 key 和 value')
     if 'fill_blank' in active_types:
         type_hints.append('- 填空题（fill_blank）：options 为空数组 []，content 中用 "______" 标记填空位置')
+    if 'true_false' in active_types:
+        type_hints.append('- 判断题（true_false）：options 包含 [{"key":"A","value":"正确"},{"key":"B","value":"错误"}]，answer 为 "A" 或 "B"')
+    if 'calculation' in active_types:
+        type_hints.append('- 计算题（calculation）：options 为空数组 []，answer 写完整计算步骤和结果，analysis 写解题思路')
     if 'short_answer' in active_types:
         type_hints.append('- 简答题（short_answer）：options 为空数组 []，answer 写评分要点')
     if 'essay' in active_types:
@@ -389,8 +399,8 @@ async def generate_paper(
 
 async def _validate_and_wait_docs(doc_ids: list[str], user_id: str) -> list[str]:
     count = len(doc_ids)
-    if count < 5 or count > 15:
-        raise ValueError(f"doc_ids count must be 5-15, got {count}")
+    if count < 3 or count > 15:
+        raise ValueError(f"doc_ids count must be 3-15, got {count}")
 
     POLL_INTERVAL = 2
     MAX_WAIT = 60
@@ -459,7 +469,7 @@ async def _validate_and_wait_docs(doc_ids: list[str], user_id: str) -> list[str]
     valid_ids = [fid for fid in doc_ids if fid not in dead_ids]
     if len(valid_ids) < 1:
         raise ValueError("all uploaded files failed to process")
-    if len(valid_ids) < 5:
+    if len(valid_ids) < 3:
         logger.warning("only %d valid files out of %d, proceeding anyway", len(valid_ids), len(doc_ids))
         if len(valid_ids) < 1:
             raise ValueError("no valid files available for generation")
