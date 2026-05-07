@@ -9,13 +9,13 @@
       </div>
 
       <div class="form-group">
-        <label for="fileInput">上传资料（支持 PDF / DOCX / PPT / PPTX，可选 5-15 个文件）</label>
+        <label for="fileInput">上传资料（支持 PDF / DOCX / PPT / PPTX，可选 3-15 个文件）</label>
         <input id="fileInput" type="file" accept=".pdf,.docx,.ppt,.pptx" multiple @change="handleFileChange" :disabled="loading" />
         <div v-if="selectedFiles.length" class="file-list">
           <span v-for="(f, i) in selectedFiles" :key="i" class="file-name">{{ f.name }}</span>
           <span class="file-count">共 {{ selectedFiles.length }} 个文件</span>
         </div>
-        <p class="file-hint">单个文件最大 20MB，至少选择 5 个文件</p>
+        <p class="file-hint">单个文件最大 20MB，至少选择 3 个文件</p>
       </div>
 
       <div class="config-toggle" @click="showConfig = !showConfig">
@@ -102,7 +102,7 @@ const updateTypeCount = (key, val) => { config.types[key].count = val }
 const updateTypeScore = (key, val) => { config.types[key].score = val }
 const updateDifficulty = (key, val) => { config.difficulty[key] = val }
 
-const canGenerate = computed(() => courseName.value.trim() && selectedFiles.value.length >= 5 && !loading.value)
+const canGenerate = computed(() => courseName.value.trim() && selectedFiles.value.length >= 3 && !loading.value)
 const configTotal = computed(() => Object.values(config.types).reduce((s, t) => s + t.count, 0))
 
 const handleFileChange = (e) => {
