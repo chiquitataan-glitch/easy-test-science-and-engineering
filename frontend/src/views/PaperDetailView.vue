@@ -30,6 +30,13 @@
       </div>
 
       <PaperContent v-if="paperData" :paper-data="paperData" :paper-title="detail.paperTitle" :course-name="detail.courseName" />
+      <div v-else-if="detail.status === 'failed'" class="error-box">
+        <div class="error-icon">⚠️</div>
+        <div class="error-msg">
+          试卷生成失败
+          <div v-if="detail.failReason" style="margin-top:6px;font-size:13px;opacity:0.8;">原因：{{ detail.failReason }}</div>
+        </div>
+      </div>
       <div v-else class="empty-paper">
         <p>试卷内容加载中或试卷内容为空，请尝试重新生成。</p>
       </div>

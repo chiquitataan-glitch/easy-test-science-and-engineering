@@ -315,21 +315,24 @@ async def generate_paper(
     duration_seconds = round(time.time() - start_time, 2)
 
     if paper_json is None:
-        await _persist_failed_paper(user.id, doc_ids, course_name, category, normalized_config, last_error, duration_seconds, client_type)
+        persisted = await _persist_failed_paper(user.id, doc_ids, course_name, category, normalized_config, last_error, duration_seconds, client_type)
+        failed_paper_id = persisted["id"]
         await _write_generation_log(
-            user_id=user.id, paper_id=None, doc_ids=doc_ids, question_count=question_count,
+            user_id=user.id, paper_id=failed_paper_id, doc_ids=doc_ids, question_count=question_count,
             token_used=total_tokens, duration_ms=round(duration_seconds * 1000),
             retrieval_k=retrieval_k, mode=mode, status="failed",
             error_message=last_error,
         )
         return {
-            "id": "",
+            "id": failed_paper_id,
             "userId": user.id,
             "courseName": course_name,
             "paperTitle": None,
+            "paperJson": {},
             "status": "failed",
             "questionCount": 0,
             "totalScore": None,
+            "qualityScore": None,
             "durationSeconds": duration_seconds,
             "category": category,
             "config": normalized_config,
@@ -338,7 +341,11 @@ async def generate_paper(
             "qualityReport": None,
             "questions": [],
             "failReason": last_error,
-            "createdAt": datetime.utcnow().isoformat() + "Z",
+            "modelName": "deepseek-chat",
+            "promptVersion": "v1",
+            "tokenUsage": total_tokens,
+            "originalPaperId": original_paper_id,
+            "createdAt": datetime.now(timezone.utc).isoformat(),
         }
 
     await _deduct_quota(user)
@@ -673,7 +680,7 @@ async def _persist_paper(
     original_paper_id: str | None = None,
 ) -> dict:
     paper_id = str(uuid.uuid4())
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     paper = GeneratedPaper(
         id=paper_id,
@@ -732,6 +739,7 @@ async def _persist_failed_paper(
     duration_seconds: float, client_type: str,
 ):
     paper_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
 
     paper = GeneratedPaper(
         id=paper_id,
@@ -758,6 +766,8 @@ async def _persist_failed_paper(
     async with async_session() as session:
         session.add(paper)
         await session.commit()
+
+    return {"id": paper_id, "created_at": now.isoformat()}
 
 
 async def _write_generation_log(
