@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, Integer, DateTime, func
+from sqlalchemy import String, Integer, DateTime, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -12,7 +12,7 @@ class BillingLog(Base):
     __tablename__ = "billing_log"
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
-    userId: Mapped[str] = mapped_column(UUID(as_uuid=False))
+    userId: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"))
     type: Mapped[str] = mapped_column(String(50))
     amount: Mapped[int] = mapped_column(Integer)
     paymentMethod: Mapped[str | None] = mapped_column(String(50))

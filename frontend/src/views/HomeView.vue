@@ -71,7 +71,8 @@ const configTypes = [
   { key: 'fill_blank', label: '填空题' },
   { key: 'true_false', label: '判断题' },
   { key: 'calculation', label: '计算题' },
-  { key: 'short_answer', label: '简答题' }
+  { key: 'short_answer', label: '简答题' },
+  { key: 'essay', label: '论述题' }
 ]
 
 const configDifficulties = [
@@ -91,9 +92,10 @@ const config = reactive({
     single_choice: { count: 8, score: 5 },
     multi_choice: { count: 2, score: 5 },
     fill_blank: { count: 10, score: 2 },
-    true_false: { count: 10, score: 1 },
-    calculation: { count: 4, score: 3 },
-    short_answer: { count: 2, score: 4 }
+    true_false: { count: 0, score: 2 },
+    calculation: { count: 0, score: 8 },
+    short_answer: { count: 2, score: 4 },
+    essay: { count: 1, score: 10 }
   },
   difficulty: { easy: 0.3, medium: 0.5, hard: 0.2 }
 })
@@ -144,7 +146,8 @@ async function handleGenerate() {
         fill_blank: { count: config.types.fill_blank.count, score: config.types.fill_blank.score },
         true_false: { count: config.types.true_false.count, score: config.types.true_false.score },
         calculation: { count: config.types.calculation.count, score: config.types.calculation.score },
-        short_answer: { count: config.types.short_answer.count, score: config.types.short_answer.score }
+        short_answer: { count: config.types.short_answer.count, score: config.types.short_answer.score },
+        essay: { count: config.types.essay.count, score: config.types.essay.score }
       },
       difficulty: { easy: config.difficulty.easy, medium: config.difficulty.medium, hard: config.difficulty.hard }
     } : undefined

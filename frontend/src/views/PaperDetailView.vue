@@ -107,13 +107,35 @@ async function handleExport() {
       headers: { 'Authorization': `Bearer ${token}` }
     })
     if (!response.ok) {
-      const errData = await response.json().catch(() => ({}))
-      throw new Error(errData.detail || errData.message || '导出失败')
+      const contentType = response.headers.get('Content-Type') || ''
+      if (contentType.includes('application/json')) {
+        const errData = await response.json()
+        const msg = errData.message || errData.detail || `导出失败 (${response.status})`
+        throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg))
+      }
+      throw new Error(`导出失败 (HTTP ${response.status})`)
+    }
+    const contentType = response.headers.get('Content-Type') || ''
+    if (!contentType.includes('vnd.openxmlformats') && !contentType.includes('msword')) {
+      const text = await response.text()
+      try {
+        const json = JSON.parse(text)
+        throw new Error(json.message || json.detail || '导出失败：服务端返回了非文档格式数据')
+      } catch (parseErr) {
+        if (parseErr.message !== text) throw parseErr
+        throw new Error('导出失败：服务端返回了非预期的响应格式')
+      }
     }
     const blob = await response.blob()
     const disposition = response.headers.get('Content-Disposition') || ''
-    const filenameMatch = disposition.match(/filename="?(.+?)"?$/)
-    const filename = filenameMatch ? filenameMatch[1] : '试卷.docx'
+    let filename = '试卷.docx'
+    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/)
+    if (utf8Match) {
+      filename = decodeURIComponent(utf8Match[1])
+    } else {
+      const filenameMatch = disposition.match(/filename="?(.+?)"?$/)
+      if (filenameMatch) filename = filenameMatch[1]
+    }
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url

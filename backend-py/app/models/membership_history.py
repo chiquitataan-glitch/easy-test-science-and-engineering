@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, func
+from sqlalchemy import String, DateTime, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -12,7 +12,7 @@ class MembershipHistory(Base):
     __tablename__ = "membership_history"
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
-    userId: Mapped[str] = mapped_column(UUID(as_uuid=False))
+    userId: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"))
     changeType: Mapped[str] = mapped_column(String(50))
     membershipType: Mapped[str] = mapped_column(String(50))
     startDate: Mapped[datetime] = mapped_column(DateTime)
