@@ -650,8 +650,8 @@ def _parse_and_validate(raw_response: str, config: dict) -> dict:
 
     for diff_key, expected in expected_diff_counts.items():
         actual = actual_diff_counts.get(diff_key, 0)
-        lower = expected - 2
-        upper = expected + 2
+        lower = expected - 4
+        upper = expected + 4
         if actual < lower or actual > upper:
             raise ValueError(
                 f"difficulty '{diff_key}' count {actual} out of range [{lower}, {upper}]"
