@@ -184,13 +184,14 @@ async def export_paper_docx(
     filename = f"{paper.paperTitle or paper.courseName or '试卷'}.docx"
     encoded_filename = quote(filename)
 
+    safe_filename = "exam_paper.docx"
+
     return Response(
         content=docx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={
             "Content-Disposition": (
-                f"attachment; filename*=UTF-8''{encoded_filename}; "
-                f'filename="{filename}"'
+                f"attachment; filename*=UTF-8''{encoded_filename}"
             ),
         },
     )

@@ -42,7 +42,7 @@ DEFAULT_CONFIG = {
         'multi_choice': {'count': 2, 'score': 5},
         'fill_blank': {'count': 10, 'score': 2},
         'true_false': {'count': 0, 'score': 2},
-        'calculation': {'count': 0, 'score': 8},
+        'calculation': {'count': 2, 'score': 8},
         'short_answer': {'count': 2, 'score': 4},
         'essay': {'count': 1, 'score': 10},
     },

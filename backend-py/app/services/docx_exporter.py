@@ -87,7 +87,11 @@ def _setup_styles(doc):
     font = style.font
     font.name = '宋体'
     font.size = Pt(11)
-    style.element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+    rpr = style.element.get_or_add_rPr()
+    if rpr.find(qn('w:rFonts')) is None:
+        from lxml import etree
+        etree.SubElement(rpr, qn('w:rFonts'))
+    rpr.find(qn('w:rFonts')).set(qn('w:eastAsia'), '宋体')
 
 
 def _add_title(doc, paper_data):
