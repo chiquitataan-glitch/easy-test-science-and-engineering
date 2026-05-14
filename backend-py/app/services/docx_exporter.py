@@ -183,7 +183,13 @@ def _add_single_question(doc, q, index):
 
     knowledge_points = q.get('knowledge_points', [])
     if knowledge_points:
-        kp_text = '、'.join(knowledge_points)
+        safe_kps = []
+        for kp in knowledge_points:
+            if isinstance(kp, dict):
+                safe_kps.append(str(kp.get('name', kp.get('text', str(kp)))))
+            else:
+                safe_kps.append(str(kp))
+        kp_text = '、'.join(safe_kps)
         kp_para = doc.add_paragraph()
         kp_run = kp_para.add_run(f'【知识点】{kp_text}')
         kp_run.font.size = Pt(9)

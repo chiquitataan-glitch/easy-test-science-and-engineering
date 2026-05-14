@@ -193,13 +193,16 @@ def _build_output_schema_section(active_types: list) -> str:
     lines = ['=== 第四部分：输出 JSON Schema ===', '']
     lines.append('你必须输出以下结构的纯 JSON：')
     lines.append('')
+
+    question_type_enum = '|'.join(active_types) if active_types else 'single_choice|multi_choice|fill_blank|short_answer|essay'
+
     lines.append('```json')
     lines.append('{')
     lines.append('  "paper_title": "《课程名》复习试卷",')
     lines.append('  "course_name": "课程名称",')
     lines.append('  "questions": [')
     lines.append('    {')
-    lines.append('      "question_type": "single_choice|multi_choice|fill_blank|short_answer|essay",')
+    lines.append(f'      "question_type": "{question_type_enum}",')
     lines.append('      "question_no": 1,')
     lines.append('      "content": "题目内容",')
     lines.append('      "options": [')

@@ -178,8 +178,8 @@ async def export_paper_docx(
     try:
         docx_bytes = export_paper_from_model(paper, questions)
     except Exception as e:
-        logger.exception("failed to export paper %s", paper_id)
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("failed to export paper %s: type=%s", paper_id, type(e).__name__)
+        raise HTTPException(status_code=500, detail="export failed")
 
     filename = f"{paper.paperTitle or paper.courseName or '试卷'}.docx"
     encoded_filename = quote(filename)
