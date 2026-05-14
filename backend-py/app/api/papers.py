@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
@@ -36,6 +37,11 @@ async def generate_paper(
             client_type="web",
         )
         return result
+    except paper_generator_service.QuotaExceededError as e:
+        raise HTTPException(
+            status_code=402,
+            detail={"code": "QUOTA_EXCEEDED", "message": e.message},
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -136,6 +142,11 @@ async def regenerate_paper(
             original_paper_id=paper_id,
         )
         return result
+    except paper_generator_service.QuotaExceededError as e:
+        raise HTTPException(
+            status_code=402,
+            detail={"code": "QUOTA_EXCEEDED", "message": e.message},
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -171,11 +182,17 @@ async def export_paper_docx(
         raise HTTPException(status_code=500, detail=str(e))
 
     filename = f"{paper.paperTitle or paper.courseName or '试卷'}.docx"
+    encoded_filename = quote(filename)
 
     return Response(
         content=docx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": (
+                f"attachment; filename*=UTF-8''{encoded_filename}; "
+                f'filename="{filename}"'
+            ),
+        },
     )
 
 

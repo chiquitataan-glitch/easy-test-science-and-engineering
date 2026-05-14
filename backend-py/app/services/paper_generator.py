@@ -276,7 +276,7 @@ async def generate_paper(
     normalized_config = _normalize_config(config)
     question_count = sum(v["count"] for v in normalized_config["types"].values())
 
-    await _check_quota(user)
+    await _check_and_deduct_quota(user)
 
     rag_result = await retrieve_relevant_chunks(doc_ids, question_count, category, user.id)
     retrieved_chunks = rag_result.get("chunks", [])
@@ -315,6 +315,7 @@ async def generate_paper(
     duration_seconds = round(time.time() - start_time, 2)
 
     if paper_json is None:
+        await _refund_quota(user)
         persisted = await _persist_failed_paper(user.id, doc_ids, course_name, category, normalized_config, last_error, duration_seconds, client_type)
         failed_paper_id = persisted["id"]
         await _write_generation_log(
@@ -347,8 +348,6 @@ async def generate_paper(
             "originalPaperId": original_paper_id,
             "createdAt": datetime.now(timezone.utc).isoformat(),
         }
-
-    await _deduct_quota(user)
 
     paper_data = await _persist_paper(
         user_id=user.id, doc_ids=doc_ids, course_name=course_name,
@@ -511,46 +510,69 @@ async def _load_document_texts_for_prompt(doc_ids: list[str]) -> list[dict]:
     return chunks
 
 
-async def _check_quota(user: User):
+class QuotaExceededError(Exception):
+    def __init__(self, message: str = "no remaining generations"):
+        self.message = message
+        super().__init__(message)
+
+
+async def _check_and_deduct_quota(user: User):
     now = datetime.now(timezone.utc)
 
     async with async_session() as session:
-        result = await session.execute(
-            select(User.remainingGenerations, User.membershipType, User.membershipExpire)
-            .where(User.id == user.id)
-        )
-        row = result.one_or_none()
-        if not row:
-            raise ValueError("user not found")
+        async with session.begin():
+            result = await session.execute(
+                select(User.remainingGenerations, User.membershipType, User.membershipExpire)
+                .where(User.id == user.id)
+                .with_for_update()
+            )
+            row = result.one_or_none()
+            if not row:
+                raise ValueError("user not found")
 
-        db_remaining, db_membership, db_membership_expire = row
+            db_remaining, db_membership, db_membership_expire = row
 
-        if db_membership != "free":
-            if db_membership_expire and db_membership_expire.replace(tzinfo=timezone.utc) < now:
-                raise ValueError("membership expired")
-            if db_remaining == -1:
+            if db_membership != "free":
+                if db_membership_expire and db_membership_expire.replace(tzinfo=timezone.utc) < now:
+                    raise QuotaExceededError("membership expired")
+                if db_remaining == -1:
+                    return
+                if db_remaining <= 0:
+                    raise QuotaExceededError("no remaining generations")
+                stmt = (
+                    update(User)
+                    .where(User.id == user.id, User.remainingGenerations == db_remaining)
+                    .values(remainingGenerations=db_remaining - 1)
+                )
+                await session.execute(stmt)
+                user.remainingGenerations = db_remaining - 1
                 return
+
             if db_remaining <= 0:
-                raise ValueError("no remaining generations")
-            return
+                raise QuotaExceededError("no remaining generations")
 
-        if db_remaining <= 0:
-            raise ValueError("no remaining generations")
+            stmt = (
+                update(User)
+                .where(User.id == user.id, User.remainingGenerations == db_remaining)
+                .values(remainingGenerations=db_remaining - 1)
+            )
+            await session.execute(stmt)
+            user.remainingGenerations = db_remaining - 1
 
 
-async def _deduct_quota(user: User):
+async def _refund_quota(user: User):
     if user.remainingGenerations == -1:
         return
 
     async with async_session() as session:
-        result = await session.execute(
-            update(User)
-            .where(User.id == user.id, User.remainingGenerations > 0)
-            .values(remainingGenerations=User.remainingGenerations - 1)
-        )
-        if result.rowcount == 0:
-            raise ValueError("no remaining generations")
-        await session.commit()
+        async with session.begin():
+            stmt = (
+                update(User)
+                .where(User.id == user.id)
+                .values(remainingGenerations=User.remainingGenerations + 1)
+            )
+            await session.execute(stmt)
+            user.remainingGenerations += 1
 
 
 async def _call_deepseek_chat(prompt: str) -> tuple[str, int]:
