@@ -41,6 +41,14 @@ def export_paper_to_docx_bytes(paper_data: dict) -> bytes:
 
 
 def export_paper_from_model(paper, questions) -> bytes:
+    try:
+        return _export_paper_from_model_impl(paper, questions)
+    except Exception as e:
+        logger.exception("export_paper_from_model failed for paper %s", getattr(paper, 'id', 'unknown'))
+        raise
+
+
+def _export_paper_from_model_impl(paper, questions) -> bytes:
     doc = Document()
 
     _setup_styles(doc)
@@ -61,15 +69,26 @@ def export_paper_from_model(paper, questions) -> bytes:
 
     question_list = []
     for pq in questions:
+        safe_options = _safe_normalize_options(pq.options)
+        knowledge = pq.knowledgePoints or []
+        safe_kps = []
+        for kp in knowledge:
+            if isinstance(kp, dict):
+                safe_kps.append(str(kp.get('name', kp.get('point', str(kp)))))
+            elif isinstance(kp, str):
+                safe_kps.append(kp)
+            else:
+                safe_kps.append(str(kp))
+
         q = {
             'question_no': pq.questionNo or 0,
-            'question_type': pq.questionType or '',
-            'content': pq.content or '',
-            'options': _normalize_options(pq.options),
-            'answer': pq.answer or '',
-            'analysis': pq.analysis or '',
-            'knowledge_points': pq.knowledgePoints or [],
-            'difficulty': pq.difficulty or 'medium',
+            'question_type': str(pq.questionType or ''),
+            'content': str(pq.content or ''),
+            'options': safe_options,
+            'answer': str(pq.answer or ''),
+            'analysis': str(pq.analysis or ''),
+            'knowledge_points': safe_kps,
+            'difficulty': str(pq.difficulty or 'medium'),
             'score': pq.score or 0,
         }
         question_list.append(q)
@@ -160,7 +179,9 @@ def _add_single_question(doc, q, index):
     options = _normalize_options(q.get('options'))
     if options and qtype in ('single_choice', 'multi_choice'):
         for opt in options:
-            opt_text = f'{opt.get("key", "")}. {opt.get("value", "")}'
+            key = str(opt.get('key', '')) if isinstance(opt, dict) else ''
+            value = str(opt.get('value', str(opt))) if isinstance(opt, dict) else str(opt)
+            opt_text = f'{key}. {value}' if key else value
             opt_para = doc.add_paragraph(opt_text)
             opt_para.paragraph_format.left_indent = Inches(0.3)
             if opt_para.runs:
@@ -196,6 +217,17 @@ def _add_single_question(doc, q, index):
         kp_run.font.color.rgb = RGBColor(120, 120, 120)
 
     doc.add_paragraph('')
+
+
+def _safe_normalize_options(options):
+    opts = _normalize_options(options)
+    safe = []
+    for item in opts:
+        if isinstance(item, dict):
+            safe.append(item)
+        else:
+            safe.append({"key": "", "value": str(item)})
+    return safe
 
 
 def _normalize_options(options):
