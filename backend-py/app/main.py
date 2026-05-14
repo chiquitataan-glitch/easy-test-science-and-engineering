@@ -11,6 +11,10 @@ from app.api.admin import router as admin_router
 from app.database import init_db
 from app.middleware.response import response_wrapper
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title="Easy Test API", version="0.2.0")
 
 app.middleware("http")(response_wrapper)
@@ -37,7 +41,11 @@ async def health():
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    return JSONResponse(status_code=500, content={"detail": str(exc)})
+    logger.error("unhandled exception: %s", exc, exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "internal server error"},
+    )
 
 
 @app.on_event("startup")

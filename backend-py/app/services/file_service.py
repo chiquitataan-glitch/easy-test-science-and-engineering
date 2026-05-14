@@ -17,7 +17,7 @@ from app.models.document_chunk import DocumentChunk
 from app.models.enums import FileStatus
 from app.services.chroma_store import add_chunks_to_chroma, delete_document_vectors
 
-ALLOWED_EXTENSIONS = {".pdf", ".docx", ".ppt", ".pptx"}
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx"}
 MIME_MAP = {
     ".pdf": "application/pdf",
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -175,12 +175,11 @@ async def process_file_extraction(file_id: str):
         except Exception as e:
             import logging
             _logger = logging.getLogger(__name__)
-            _logger.warning("embedding failed for file %s, marking ready for prompt fallback: %s", file_id, e)
-            _chunk_count = len(chunks) if 'chunks' in dir() and chunks else 0
+            _logger.warning("text extraction failed for file %s, marking ready for prompt fallback: %s", file_id, e)
             file = await session.get(UploadedFile, file_id)
             if file:
                 file.status = FileStatus.ready
-                file.chunkCount = _chunk_count
+                file.chunkCount = 0
                 await session.commit()
             return
 
