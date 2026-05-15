@@ -9,13 +9,13 @@
       </div>
 
       <div class="form-group">
-        <label for="fileInput">上传资料（支持 PDF / DOCX / PPT / PPTX，可选 3-15 个文件）</label>
-        <input id="fileInput" type="file" accept=".pdf,.docx,.ppt,.pptx" multiple @change="handleFileChange" :disabled="loading" />
+        <label for="fileInput">上传资料（支持 PDF / DOCX / PPTX，可选 3-50 个文件）</label>
+        <input id="fileInput" type="file" accept=".pdf,.docx,.pptx" multiple @change="handleFileChange" :disabled="loading" />
         <div v-if="selectedFiles.length" class="file-list">
           <span v-for="(f, i) in selectedFiles" :key="i" class="file-name">{{ f.name }}</span>
           <span class="file-count">共 {{ selectedFiles.length }} 个文件</span>
         </div>
-        <p class="file-hint">单个文件最大 20MB，至少选择 3 个文件</p>
+        <p class="file-hint">单个文件最大 100MB，至少选择 3 个文件，最多 50 个</p>
       </div>
 
       <div class="config-toggle" @click="showConfig = !showConfig">
@@ -81,6 +81,9 @@ const configDifficulties = [
   { key: 'hard', label: '困难' }
 ]
 
+const MAX_FILE_SIZE = 100 * 1024 * 1024
+const MAX_FILE_COUNT = 50
+
 const courseName = ref('')
 const selectedFiles = ref([])
 const loading = ref(false)
@@ -108,19 +111,35 @@ const canGenerate = computed(() => courseName.value.trim() && selectedFiles.valu
 const configTotal = computed(() => Object.values(config.types).reduce((s, t) => s + t.count, 0))
 
 const handleFileChange = (e) => {
-  selectedFiles.value = Array.from(e.target.files || [])
+  const files = Array.from(e.target.files || [])
   error.value = ''
+
+  if (files.length > MAX_FILE_COUNT) {
+    error.value = `最多选择 ${MAX_FILE_COUNT} 个文件，当前选择了 ${files.length} 个`
+    selectedFiles.value = []
+    return
+  }
+
+  const oversized = files.filter(f => f.size > MAX_FILE_SIZE)
+  if (oversized.length) {
+    const names = oversized.map(f => f.name).join('、')
+    error.value = `以下文件超过 100MB：${names}`
+    selectedFiles.value = []
+    return
+  }
+
+  selectedFiles.value = files
 }
 
-async function handleGenerate() {
-  if (!canGenerate.value) return
+async function uploadFilesConcurrently(files, concurrency = 5) {
+  const fileIds = []
+  const errors = []
+  let index = 0
 
-  loading.value = true
-  error.value = ''
-
-  try {
-    const fileIds = []
-    for (const file of selectedFiles.value) {
+  async function uploadNext() {
+    while (index < files.length) {
+      const currentIndex = index++
+      const file = files[currentIndex]
       const formData = new FormData()
       formData.append('file', file)
 
@@ -134,10 +153,31 @@ async function handleGenerate() {
         if (err.code === 'DUPLICATE_FILE') {
           fileIds.push(err.details.existing_file_id)
         } else {
-          throw err
+          errors.push({ file: file.name, error: err })
         }
       }
     }
+  }
+
+  const workers = Array.from({ length: Math.min(concurrency, files.length) }, () => uploadNext())
+  await Promise.all(workers)
+
+  if (errors.length > 0) {
+    const failedNames = errors.map(e => e.file).join('、')
+    throw new Error(`以下文件上传失败：${failedNames}`)
+  }
+
+  return fileIds
+}
+
+async function handleGenerate() {
+  if (!canGenerate.value) return
+
+  loading.value = true
+  error.value = ''
+
+  try {
+    const fileIds = await uploadFilesConcurrently(selectedFiles.value)
 
     const apiConfig = showConfig.value ? {
       types: {
@@ -164,11 +204,14 @@ async function handleGenerate() {
     await refreshUser()
     router.push(`/papers/${generateData.data.id}`)
   } catch (err) {
-    if (err.code === 'QUOTA_EXCEEDED') {
-      error.value = '生成次数已用完。未来支持购买额度。'
-    } else {
-      error.value = err.message || '生成失败'
+    const ERROR_MESSAGES = {
+      QUOTA_EXCEEDED: '生成次数已用完。未来支持购买额度。',
+      FILE_TOO_LARGE: '文件大小超过 100MB 限制，请压缩后重新上传。',
+      UNSUPPORTED_FILE_TYPE: '不支持的文件格式，仅支持 PDF、DOCX、PPTX。',
+      DUPLICATE_FILE: '文件已存在，已自动复用。',
+      TOO_MANY_FILES: '文件数量超过上限，最多 50 个文件。',
     }
+    error.value = ERROR_MESSAGES[err.code] || err.message || '生成失败'
   } finally {
     loading.value = false
   }

@@ -9,7 +9,8 @@ class Settings(BaseSettings):
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com/v1"
     UPLOAD_DIR: str = "/data/uploads"
     CHROMA_PERSIST_DIR: str = "/data/chroma"
-    MAX_FILE_SIZE: int = 20971520
+    MAX_FILE_SIZE: int = 104857600
+    MAX_FILES_PER_PAPER: int = 50
     DEFAULT_FREE_GENERATIONS: int = 20
     WECHAT_APP_ID: str = ""
     WECHAT_APP_SECRET: str = ""
