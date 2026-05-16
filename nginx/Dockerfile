@@ -8,7 +8,7 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 
-COPY nginx/nginx.conf /etc/nginx/nginx.conf
+COPY nginx/nginx.ssl.conf /etc/nginx/nginx.conf
 
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 
